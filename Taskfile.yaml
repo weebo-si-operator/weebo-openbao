@@ -78,6 +78,11 @@ tasks:
     cmds:
       - mise exec -- cargo test --workspace --tests --no-fail-fast
 
+  test:live-openbao:
+    desc: "The use-cases and the adapter against a real OpenBao 2.7.1 (podman, host network), logged in with the bootstrap policy of RFC 0007 §6.1"
+    cmds:
+      - OPENBAO_LIVE=1 mise exec -- cargo test -p adapters-outbound --test live_openbao -- --nocapture
+
   test:all:
     desc: "Every test suite: unit/contract + integration"
     cmds:
