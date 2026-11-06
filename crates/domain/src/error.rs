@@ -40,6 +40,12 @@ weebo_kit_domain::reason_codes! {
         InstanceUnauthorized,
         /// Openbao answered with an unexpected error.
         RemoteError,
+        /// OpenBao is sealed or not ready (503): nothing is written, the
+        /// existing spaces keep serving once it is unsealed.
+        VaultSealed,
+        /// OpenBao denied a call to a valid token: the operator's
+        /// bootstrap policy and the CRs disagree (RFC 0007 §10.2).
+        PermissionDenied,
         /// A Kubernetes API call of the operator itself failed (reading a
         /// CR or a Secret, patching a status, the finalizer) — retried.
         KubernetesApiError,

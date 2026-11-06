@@ -4,6 +4,8 @@
 
 pub mod gateway_factory;
 pub mod http_gateway;
+pub mod openbao;
 
 pub use gateway_factory::{HttpGatewayFactory, OperatorInstances};
 pub use http_gateway::HttpGateway;
+pub use openbao::OpenbaoSpaceAdmin;

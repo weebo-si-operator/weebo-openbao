@@ -13,6 +13,8 @@ async-trait = { workspace = true }
 kube = { workspace = true }
 reqwest = { workspace = true }
 serde = { workspace = true }
+serde_json = { workspace = true }
+vaultrs = "0.8"
 weebo-kit-adapters = { workspace = true }
 weebo-kit-api = { workspace = true }
 
