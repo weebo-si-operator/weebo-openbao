@@ -3,6 +3,7 @@
 //! rules, diffing a desired state against the remote one…) lives here.
 
 pub mod error;
+pub mod policy;
 
 /// Comparing the desired state with the remote one before writing: only
 /// what drifted is sent, nothing when nothing did.
