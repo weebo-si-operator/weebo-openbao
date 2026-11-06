@@ -67,8 +67,48 @@ spec:
             - message: 'name and layoutRef are immutable: create another organization'
               rule: self.name == oldSelf.name && self.layoutRef == oldSelf.layoutRef
           status:
+            description: |-
+              What the organization wrote: the cells, recorded so that the next pass
+              and the finalizer remove exactly them, without listing anything.
             nullable: true
             properties:
+              cells:
+                items:
+                  description: One role × namespace of the layout.
+                  properties:
+                    groups:
+                      default: []
+                      description: One external group per OIDC backend of the namespace.
+                      items:
+                        properties:
+                          aliasId:
+                            nullable: true
+                            type: string
+                          backend:
+                            type: string
+                          id:
+                            description: OpenBao's id of the group.
+                            type: string
+                          name:
+                            type: string
+                        required:
+                        - backend
+                        - id
+                        - name
+                        type: object
+                      type: array
+                    namespace:
+                      type: string
+                    policy:
+                      type: string
+                    role:
+                      type: string
+                  required:
+                  - namespace
+                  - policy
+                  - role
+                  type: object
+                type: array
               conditions:
                 default: []
                 description: '`Ready`, carrying one of the operator''s reason codes.'

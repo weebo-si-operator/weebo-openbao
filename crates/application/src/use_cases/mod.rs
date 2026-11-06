@@ -4,6 +4,7 @@
 
 pub mod reconcile_instance;
 pub mod reconcile_namespace;
+pub mod reconcile_organization;
 
 use domain::error::ReasonCode;
 use domain::{Advisory, Drift, Failure, RemoteWrite};

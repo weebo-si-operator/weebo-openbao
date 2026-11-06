@@ -36,6 +36,7 @@ pub use weebo_kit_runtime::controller::{controller, drive};
 
 pub mod instance;
 pub mod namespace;
+pub mod organization;
 
 /// Field manager of the status patches, meter and Event reporter name.
 pub const FIELD_MANAGER: &str = "weebo-openbao-operator";
@@ -83,6 +84,12 @@ pub fn spawn_watches(client: &Client, scope: &WatchScope, health: &Arc<Health>) 
             scope,
             health,
             "OpenbaoNamespace watch",
+        );
+        watches.spawn(
+            scope.api::<api::OpenbaoOrganization>(client.clone()),
+            scope,
+            health,
+            "OpenbaoOrganization watch",
         );
     }
     watches
@@ -176,6 +183,12 @@ pub trait HasStatus {
 impl HasStatus for api::Instance {
     fn status(&self) -> Option<&Status> {
         self.status.as_ref()
+    }
+}
+
+impl HasStatus for api::OpenbaoOrganization {
+    fn status(&self) -> Option<&Status> {
+        self.status.as_ref().map(|s| &s.common)
     }
 }
 

@@ -61,6 +61,18 @@ weebo_kit_domain::reason_codes! {
         /// An object of the same name is there and isn't this CR's (no
         /// `managed-by` mark for it): nothing is written over it.
         NotOwned,
+        /// A cell or a rule cites an `OpenbaoAccessLevel` that doesn't
+        /// exist: its policy stays as it was, neither widened nor removed.
+        LevelNotFound,
+        /// A cell or a rule names an `OpenbaoNamespace` that is absent, not
+        /// ready, or without the type its mount needs.
+        NamespaceNotReady,
+        /// Access would be removed (a role, a cell, a backend) without
+        /// `openbao.weebo.io/allow-disruptive-update: "true"` on the
+        /// layout: nothing is deleted.
+        DisruptiveChangeBlocked,
+        /// The organization's `layoutRef` names no `OpenbaoSpaceLayout`.
+        LayoutNotFound,
         /// A mount `orgs` or `users` no longer declared: left in place
         /// with its secrets (the operator never disables a mount).
         MountOrphaned,

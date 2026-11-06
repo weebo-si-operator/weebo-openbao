@@ -135,7 +135,7 @@ pub struct UsersSpaces {
     version = "v1alpha1",
     kind = "OpenbaoOrganization",
     plural = "openbaoorganizations",
-    status = "Status",
+    status = "OrganizationStatus",
     printcolumn = r#"{"name":"Name","type":"string","jsonPath":".spec.name"}"#,
     printcolumn = r#"{"name":"Ready","type":"string","jsonPath":".status.conditions[?(@.type=='Ready')].status"}"#,
     printcolumn = r#"{"name":"Reason","type":"string","jsonPath":".status.conditions[?(@.type=='Ready')].reason"}"#
@@ -163,6 +163,40 @@ pub struct OpenbaoOrganizationSpec {
         "additionalProperties" = {"type": "string", "maxLength": 64}
     ))]
     pub alias_names: BTreeMap<String, String>,
+}
+
+/// What the organization wrote: the cells, recorded so that the next pass
+/// and the finalizer remove exactly them, without listing anything.
+#[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct OrganizationStatus {
+    #[serde(flatten)]
+    pub common: Status,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub cells: Vec<CellStatus>,
+}
+
+/// One role × namespace of the layout.
+#[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, Eq, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct CellStatus {
+    pub namespace: String,
+    pub role: String,
+    pub policy: String,
+    /// One external group per OIDC backend of the namespace.
+    #[serde(default)]
+    pub groups: Vec<CellGroupStatus>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, Eq, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct CellGroupStatus {
+    pub backend: String,
+    pub name: String,
+    /// OpenBao's id of the group.
+    pub id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub alias_id: Option<String>,
 }
 
 fn default_alias_template() -> String {
