@@ -2,6 +2,12 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## [v0.1.2](https://github.com/weebo-si-operator/weebo-openbao/compare/7e2b7c70e6fc58bee47c765fba8ffe3086a757e3..v0.1.2) - 2026-11-06
+#### Bug Fixes
+- (**chart**) drop the template's leftover CRDs and NOTES - ([7e2b7c7](https://github.com/weebo-si-operator/weebo-openbao/commit/7e2b7c70e6fc58bee47c765fba8ffe3086a757e3)) - Max Batleforc, Claude Opus 5.5
+
+- - -
+
 ## [v0.1.1](https://github.com/weebo-si-operator/weebo-openbao/compare/483e960cf90ab6b38fb9651de2ca9b671914d46c..v0.1.1) - 2026-11-06
 #### Bug Fixes
 - (**image**) accept CVE-2026-84243 (glibc, no fix) until 2026-12-06 - ([483e960](https://github.com/weebo-si-operator/weebo-openbao/commit/483e960cf90ab6b38fb9651de2ca9b671914d46c)) - Max Batleforc, Claude Opus 5.5
