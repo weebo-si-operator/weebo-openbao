@@ -1,0 +1,114 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/domain",
+    "crates/api",
+    "crates/application",
+    "crates/adapters-outbound",
+    "crates/adapters-inbound",
+    "crates/operator",
+    "crates/crdgen",
+    "crates/testkit",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "Apache-2.0"
+publish = false
+repository = "https://github.com/batleforc/weebo-openbao"
+
+[workspace.dependencies]
+domain = { path = "crates/domain" }
+api = { path = "crates/api" }
+application = { path = "crates/application" }
+adapters-outbound = { path = "crates/adapters-outbound" }
+adapters-inbound = { path = "crates/adapters-inbound" }
+testkit = { path = "crates/testkit" }
+
+# Shared operator kit. To iterate on it locally, temporarily swap the
+# `git`/`tag` pair for `path = "../weebo-operator-kit/crates/<crate>"` —
+# never push with a path dependency (CI and container builds don't see it).
+weebo-kit-domain = { git = "https://github.com/weebo-si-operator/weebo-operator-kit", tag = "v0.29.0" }
+weebo-kit-api = { git = "https://github.com/weebo-si-operator/weebo-operator-kit", tag = "v0.29.0" }
+weebo-kit-application = { git = "https://github.com/weebo-si-operator/weebo-operator-kit", tag = "v0.29.0" }
+weebo-kit-adapters = { git = "https://github.com/weebo-si-operator/weebo-operator-kit", tag = "v0.29.0" }
+weebo-kit-runtime = { git = "https://github.com/weebo-si-operator/weebo-operator-kit", tag = "v0.29.0" }
+weebo-kit-testkit = { git = "https://github.com/weebo-si-operator/weebo-operator-kit", tag = "v0.29.0" }
+
+# Same versions as the kit: a mismatch would link two copies of
+# `kube`/`k8s-openapi` and the types wouldn't line up.
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+serde_norway = "0.9"
+thiserror = "2.0"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "time", "sync", "net", "signal"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+kube = { version = "4.0", features = ["derive", "runtime", "client", "unstable-runtime"] }
+k8s-openapi = { version = "0.28", features = ["v1_36", "schemars"] }
+schemars = "1.2"
+axum = "0.8"
+rustls = { version = "0.23", features = ["ring"] }
+wiremock = "0.6"
+opentelemetry = "0.33"
+anyhow = "1"
+clap = { version = "4", features = ["derive", "env"] }
+async-trait = "0.1"
+uuid = { version = "1", features = ["v4"] }
+futures = "0.3"
+reqwest = { version = "0.13", default-features = false, features = ["rustls", "json"] }
+
+# weebo-good-practice: the kit's own lints, on for every crate
+# (`[lints] workspace = true`); clippy.toml lets tests panic.
+[workspace.lints.rust]
+unsafe_code = "deny"                      # LANG-UNSAFE; "deny", not "forbid": #[expect(unsafe_code, reason)] must stay possible for FFI
+unsafe_op_in_unsafe_fn = "deny"           # default in edition 2024, explicit for 2021 crates
+let_underscore_drop = "warn"
+
+[workspace.lints.clippy]
+# Panics (LANG-LIMIT-PANIC, LANG-LIMIT-PANIC-SRC, LANG-ARRINDEXING). Tests are exempt via clippy.toml.
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+todo = "deny"
+unimplemented = "deny"
+unreachable = "deny"
+indexing_slicing = "deny"
+# Integer overflow (LANG-ARITH): checked_/saturating_/wrapping_ instead of bare operators.
+arithmetic_side_effects = "deny"
+cast_possible_truncation = "deny"
+cast_sign_loss = "deny"
+cast_possible_wrap = "deny"
+# Errors are handled, never dropped.
+let_underscore_must_use = "deny"
+let_underscore_future = "deny"
+# Memory (MEM-FORGET).
+mem_forget = "deny"
+# Every escape hatch carries its justification, and dies with the code it excused.
+allow_attributes = "deny"                 # #[expect], never #[allow]: an expect with nothing to excuse fails
+allow_attributes_without_reason = "deny"
+undocumented_unsafe_blocks = "deny"       # LANG-UNSAFE-ENCP: every unsafe {} has a // SAFETY: comment
+# Left-over debugging.
+dbg_macro = "deny"
+
+# Debug info on test binaries balloons target/ across this many crates
+# (envtest alone links kube-apiserver/etcd); CI runners have run out of
+# disk mid-build over this without it.
+[profile.test]
+debug = false
+
+# Most of target/ is debug info nobody reads: line tables keep file:line in
+# panics and backtraces. Tests inherit dev; overflow checks stay on.
+[profile.dev]
+debug = "line-tables-only"
+
+[profile.dev.package."*"]
+debug = false
+
+# The binary the image ships: smaller to pull, no symbols. `panic` stays
+# `unwind`, the default: `abort` would change how a panic ends the process.
+[profile.release]
+strip = true
+lto = "thin"
+codegen-units = 1

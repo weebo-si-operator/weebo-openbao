@@ -1,0 +1,82 @@
+use kube::{CustomResource, ResourceExt};
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
+pub use weebo_kit_api::InstanceRef;
+
+use crate::status::Status;
+
+/// The short names the rest of the workspace uses.
+pub use self::OpenbaoObject as Object;
+pub use self::OpenbaoObjectSpec as ObjectSpec;
+
+/// An object managed on one Openbao instance — the example resource of
+/// this operator: replace it with the real kinds. Created (or updated) on
+/// every reconcile; deleted when the CR is, unless the CR carries
+/// `openbao.weebo.io/force-orphan: "true"`.
+#[derive(CustomResource, Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[kube(
+    group = "openbao.weebo.io",
+    version = "v1alpha1",
+    kind = "OpenbaoObject",
+    plural = "openbaoobjects",
+    namespaced,
+    status = "Status",
+    printcolumn = r#"{"name":"Instance","type":"string","jsonPath":".status.instance.name"}"#,
+    printcolumn = r#"{"name":"Ready","type":"string","jsonPath":".status.conditions[?(@.type=='Ready')].status"}"#,
+    printcolumn = r#"{"name":"Reason","type":"string","jsonPath":".status.conditions[?(@.type=='Ready')].reason"}"#
+)]
+#[serde(rename_all = "camelCase")]
+pub struct OpenbaoObjectSpec {
+    /// The `OpenbaoInstance` or `OpenbaoLocalInstance` the object
+    /// lives on. Unset: the only `OpenbaoInstance`, else the only
+    /// `OpenbaoLocalInstance` of this namespace.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub instance_ref: Option<InstanceRef>,
+    /// Name of the remote object. Defaults to the CR's `metadata.name`.
+    /// Changing it creates a new remote object and leaves the old one
+    /// behind.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    /// Free-form description, sent as is.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+}
+
+impl Object {
+    /// The remote object's name: `spec.name`, or the CR's own name.
+    pub fn remote_name(&self) -> String {
+        self.spec.name.clone().unwrap_or_else(|| self.name_any())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn remote_name_defaults_to_the_cr_name() {
+        let mut object = Object::new(
+            "docs",
+            ObjectSpec {
+                instance_ref: Some(InstanceRef::named("main")),
+                name: None,
+                description: None,
+            },
+        );
+        assert_eq!(object.remote_name(), "docs");
+        object.spec.name = Some("documentation".into());
+        assert_eq!(object.remote_name(), "documentation");
+    }
+
+    #[test]
+    fn optional_fields_stay_out_of_the_manifest() {
+        let spec: ObjectSpec =
+            serde_json::from_value(serde_json::json!({"instanceRef": {"name": "main"}})).unwrap();
+        assert_eq!(
+            serde_json::to_value(&spec).unwrap(),
+            serde_json::json!({"instanceRef": {"name": "main"}})
+        );
+        let spec: ObjectSpec = serde_json::from_value(serde_json::json!({})).unwrap();
+        assert_eq!(serde_json::to_value(&spec).unwrap(), serde_json::json!({}));
+    }
+}
