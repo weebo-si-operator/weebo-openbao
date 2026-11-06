@@ -319,3 +319,11 @@ networkPolicy:
 # -- Extra environment variables, e.g. OTEL_EXPORTER_OTLP_ENDPOINT or
 # RUST_LOG.
 extraEnv: []
+
+# The Secrets of the release namespace the operator reads, by name (get
+# only): every OpenbaoNamespace's oidc clientSecretRef, and the
+# OpenbaoInstance's tls.caSecretRef (a copy of OpenBao's CA here). A Secret
+# not listed is SecretUnavailable.
+releaseSecrets:
+  - openbao-oidc
+  - openbao-tls

@@ -14,10 +14,6 @@ kinds:
   - openbaospacelayouts
   - openbaoorganizations
   - openbaoaccessgrants
-# shortcut: the kit's library chart grants Secrets cluster-wide whenever
-# watch.namespace is unset; RFC 0007 §6.6 wants get on the OIDC client
-# Secrets of the release namespace only (resourceNames). Upgrade when the
-# kit's chart can drop the cluster-wide Secret rule without watch.namespace.
 # The namespaced kinds: none, every kind is cluster-scoped (RFC 0007 §6.6).
 namespacedKinds: []
 # Kinds the admission webhook checks: none until the operator serves
@@ -28,6 +24,10 @@ env: []
 egress:
   - comment: OpenBao.
     rules: {{ toJson .Values.networkPolicy.egress.openbao }}
+# No Secret cluster-wide: only the release namespace's, by name (RFC 0007
+# §6.6), the OIDC backends' client secrets and OpenBao's CA.
+clusterSecrets: false
+releaseSecrets: {{ toJson .Values.releaseSecrets }}
 # Alerts on the operator's own metrics, appended to the kit's.
 alerts: []
 {{- end -}}

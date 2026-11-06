@@ -733,6 +733,16 @@
         "json"
       ],
       "description": "Log line format (LOG_FORMAT)."
+    },
+    "releaseSecrets": {
+      "type": "array",
+      "description": "Secrets of the release namespace the operator may read (get by name): the OIDC client secrets and the OpenBao CA. It reads no other Secret.",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9]([-a-z0-9.]*[a-z0-9])?$",
+        "maxLength": 253
+      },
+      "uniqueItems": true
     }
   }
 }
