@@ -1,0 +1,241 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: openbaoaccessgrants.openbao.weebo.io
+spec:
+  group: openbao.weebo.io
+  names:
+    kind: OpenbaoAccessGrant
+    plural: openbaoaccessgrants
+    singular: openbaoaccessgrant
+  scope: Cluster
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .spec.namespace
+      name: Namespace
+      type: string
+    - jsonPath: .status.conditions[?(@.type=='Ready')].status
+      name: Ready
+      type: string
+    - jsonPath: .status.conditions[?(@.type=='Ready')].reason
+      name: Reason
+      type: string
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: Auto-generated derived type for OpenbaoAccessGrantSpec via `CustomResource`
+        properties:
+          spec:
+            description: |-
+              Access for workloads: Kubernetes ServiceAccounts (`subjects`) log in
+              to a `kubernetes` backend of an OpenBao namespace and get what `rules`
+              open there. One role per subject, `grant_<name>_<index>`, and one policy
+              `grant_<name>` (decision 18).
+            properties:
+              auth:
+                description: The `kubernetes` backend of that namespace the subjects log in to.
+                maxLength: 16
+                pattern: ^[a-z]([a-z0-9-]{0,14}[a-z0-9])?$
+                type: string
+              instanceRef:
+                description: The `OpenbaoInstance` of the namespace.
+                properties:
+                  name:
+                    maxLength: 253
+                    minLength: 1
+                    type: string
+                required:
+                - name
+                type: object
+              namespace:
+                description: The `OpenbaoNamespace` the access is in.
+                maxLength: 16
+                pattern: ^[a-z]([a-z0-9-]{0,14}[a-z0-9])?$
+                type: string
+              rules:
+                description: What the subjects get.
+                items:
+                  description: A level on a path of a mount of the namespace.
+                  properties:
+                    level:
+                      description: The `OpenbaoAccessLevel`.
+                      maxLength: 253
+                      minLength: 1
+                      type: string
+                    metadataPath:
+                      description: The metadata path, when it differs from `path`.
+                      maxLength: 256
+                      nullable: true
+                      pattern: ^(([a-z0-9._-]+|\+|\{org\}|\{sa\.namespace\}|\{sa\.name\})/)*([a-z0-9._-]+|\+|\*|\{org\}|\{sa\.namespace\}|\{sa\.name\})$
+                      type: string
+                    mount:
+                      description: 'The KV v2 mount: a type of the namespace (`orgs`, `users`).'
+                      maxLength: 5
+                      pattern: ^(orgs|users)$
+                      type: string
+                    organizations:
+                      description: |-
+                        The organizations `{org}` expands over; `["*"]`: every organization
+                        of the instance.
+                      items:
+                        maxLength: 40
+                        pattern: ^(\*|[a-z0-9]([a-z0-9._-]{0,38}[a-z0-9])?)$
+                        type: string
+                      maxItems: 32
+                      type: array
+                    path:
+                      description: |-
+                        The path under the mount: segments of `[a-z0-9._-]`, `+`, a last
+                        `*`, or a whole token `{org}`, `{sa.namespace}`, `{sa.name}`.
+                      maxLength: 256
+                      pattern: ^(([a-z0-9._-]+|\+|\{org\}|\{sa\.namespace\}|\{sa\.name\})/)*([a-z0-9._-]+|\+|\*|\{org\}|\{sa\.namespace\}|\{sa\.name\})$
+                      type: string
+                      x-kubernetes-validations:
+                      - message: no `.` or `..` segment
+                        rule: '!self.matches(''(^|/)\\.\\.?(/|$)'')'
+                  required:
+                  - level
+                  - mount
+                  - path
+                  type: object
+                  x-kubernetes-validations:
+                  - message: a rule naming {org} lists its organizations (or ["*"])
+                    rule: '!(self.path.contains(''{org}'') || (has(self.metadataPath) && self.metadataPath.contains(''{org}''))) || (has(self.organizations) && size(self.organizations) > 0)'
+                maxItems: 8
+                minItems: 1
+                type: array
+              subjects:
+                description: The ServiceAccounts, one Kubernetes role each.
+                items:
+                  description: |-
+                    ServiceAccounts by namespace and name (a leading or trailing `*` glob),
+                    or by a label selector on their namespaces.
+                  properties:
+                    name:
+                      description: A ServiceAccount name, `*`, or a glob.
+                      maxLength: 253
+                      pattern: ^(\*|\*?[a-z0-9]([a-z0-9.-]{0,251}[a-z0-9])?\*?)$
+                      type: string
+                    namespace:
+                      description: A Kubernetes namespace, `*`, or a glob such as `team-*`.
+                      maxLength: 63
+                      nullable: true
+                      pattern: ^(\*|\*?[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\*?)$
+                      type: string
+                    namespaceSelector:
+                      additionalProperties:
+                        maxLength: 63
+                        type: string
+                      description: |-
+                        Namespaces whose labels match all of these (never empty: an empty
+                        selector would match every namespace).
+                      maxProperties: 8
+                      minProperties: 1
+                      nullable: true
+                      type: object
+                  required:
+                  - name
+                  type: object
+                  x-kubernetes-validations:
+                  - message: a subject names a namespace or a namespaceSelector, not both
+                    rule: has(self.__namespace__) != has(self.namespaceSelector)
+                maxItems: 8
+                minItems: 1
+                type: array
+              tokenTtlSeconds:
+                default: 900
+                description: 'Token lifetime of a workload login: 15 min by default, 1 h at most.'
+                format: uint32
+                maximum: 3600.0
+                minimum: 60.0
+                type: integer
+            required:
+            - auth
+            - instanceRef
+            - namespace
+            - rules
+            - subjects
+            type: object
+            x-kubernetes-validations:
+            - message: 'instanceRef, namespace and auth are immutable: create another grant'
+              rule: self.instanceRef == oldSelf.instanceRef && self.__namespace__ == oldSelf.__namespace__ && self.auth == oldSelf.auth
+            - message: a broad subject (a namespace glob or a selector) needs {sa.namespace} in every rule's path and metadataPath
+              rule: '!self.subjects.exists(s, has(s.namespaceSelector) || (has(s.__namespace__) && s.__namespace__.contains(''*''))) || self.rules.all(r, r.path.contains(''{sa.namespace}'') && (!has(r.metadataPath) || r.metadataPath.contains(''{sa.namespace}'')))'
+          status:
+            nullable: true
+            properties:
+              conditions:
+                default: []
+                description: '`Ready`, carrying one of the operator''s reason codes.'
+                items:
+                  properties:
+                    lastTransitionTime:
+                      description: Time is a wrapper around time.Time which supports correct marshaling to YAML and JSON.  Wrappers are provided for many of the factory methods that the time package offers.
+                      format: date-time
+                      nullable: true
+                      type: string
+                    message:
+                      type: string
+                    observedGeneration:
+                      format: int64
+                      nullable: true
+                      type: integer
+                    reason:
+                      description: One of the operator's reason codes — never a hand-written string.
+                      type: string
+                    status:
+                      description: '`"True"`, `"False"`, or `"Unknown"`.'
+                      type: string
+                    type:
+                      type: string
+                  required:
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+              instance:
+                description: |-
+                  The instance this object was resolved to and stays bound to: a
+                  `spec.instanceRef` by name only never silently moves to another
+                  instance created later under the same name.
+                nullable: true
+                properties:
+                  kind:
+                    description: '`Instance` or `LocalInstance`.'
+                    enum:
+                    - Instance
+                    - LocalInstance
+                    type: string
+                  name:
+                    type: string
+                  namespace:
+                    description: The local instance's namespace; absent for a cluster-scoped one.
+                    nullable: true
+                    type: string
+                required:
+                - kind
+                - name
+                type: object
+              observedGeneration:
+                description: The `metadata.generation` the last successful reconcile applied.
+                format: int64
+                nullable: true
+                type: integer
+              remoteId:
+                description: |-
+                  Identifier of the remote object, as Openbao returned it. Its
+                  presence means this CR created (and owns) that object: the
+                  finalizer only deletes what is recorded here.
+                nullable: true
+                type: string
+            type: object
+        required:
+        - spec
+        title: OpenbaoAccessGrant
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

@@ -1,5 +1,13 @@
 {
   "kinds": {
+    "OpenbaoAccessGrant": {
+      "produces": [],
+      "references": []
+    },
+    "OpenbaoAccessLevel": {
+      "produces": [],
+      "references": []
+    },
     "OpenbaoInstance": {
       "produces": [],
       "references": [
@@ -28,6 +36,20 @@
         }
       ]
     },
+    "OpenbaoNamespace": {
+      "produces": [],
+      "references": [
+        {
+          "path": "spec.auth[].oidc.clientSecretRef",
+          "to": [
+            {
+              "group": "",
+              "kind": "Secret"
+            }
+          ]
+        }
+      ]
+    },
     "OpenbaoObject": {
       "produces": [],
       "references": [
@@ -45,6 +67,14 @@
           ]
         }
       ]
+    },
+    "OpenbaoOrganization": {
+      "produces": [],
+      "references": []
+    },
+    "OpenbaoSpaceLayout": {
+      "produces": [],
+      "references": []
     }
   },
   "schematic": {

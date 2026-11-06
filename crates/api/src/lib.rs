@@ -6,9 +6,13 @@
 //! the CRD's title); the workspace uses them through short re-exports,
 //! [`Instance`], [`LocalInstance`] and [`Object`].
 
+pub mod access;
+pub mod grant;
 pub mod instance;
 pub mod local_instance;
+pub mod namespace;
 pub mod object;
+pub mod refs;
 pub mod status;
 
 /// API group shared by every CRD of this operator.
@@ -19,7 +23,10 @@ pub const GROUP: &str = "openbao.weebo.io";
 /// cleanup), `allow-disruptive-update`, `rotate-secret`, `import-pending`.
 pub const ANNOTATIONS: weebo_kit_api::Annotations = weebo_kit_api::Annotations::new(GROUP);
 
+pub use access::{OpenbaoAccessLevel, OpenbaoOrganization, OpenbaoSpaceLayout};
+pub use grant::OpenbaoAccessGrant;
 pub use instance::Instance;
 pub use local_instance::LocalInstance;
+pub use namespace::OpenbaoNamespace;
 pub use object::Object;
 pub use status::Status;

@@ -33,6 +33,11 @@ fn main() -> anyhow::Result<()> {
     write::<api::Instance>(&args.out, &roles, &mut kinds)?;
     write::<api::LocalInstance>(&args.out, &roles, &mut kinds)?;
     write::<api::Object>(&args.out, &roles, &mut kinds)?;
+    write::<api::OpenbaoNamespace>(&args.out, &roles, &mut kinds)?;
+    write::<api::OpenbaoAccessLevel>(&args.out, &roles, &mut kinds)?;
+    write::<api::OpenbaoSpaceLayout>(&args.out, &roles, &mut kinds)?;
+    write::<api::OpenbaoOrganization>(&args.out, &roles, &mut kinds)?;
+    write::<api::OpenbaoAccessGrant>(&args.out, &roles, &mut kinds)?;
     // The kinds of the IDE only: the kit's shared ones (an OIDC issuer, a
     // registry mirrored…), then this operator's own, keyed by name, its
     // `spec` a Rust type with the same markers as a CRD's, e.g.
