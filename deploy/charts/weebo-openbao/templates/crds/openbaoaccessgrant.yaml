@@ -165,6 +165,9 @@ spec:
             - message: a broad subject (a namespace glob or a selector) needs {sa.namespace} in every rule's path and metadataPath
               rule: '!self.subjects.exists(s, has(s.namespaceSelector) || (has(s.__namespace__) && s.__namespace__.contains(''*''))) || self.rules.all(r, r.path.contains(''{sa.namespace}'') && (!has(r.metadataPath) || r.metadataPath.contains(''{sa.namespace}'')))'
           status:
+            description: |-
+              What the grant wrote: its policy and the role of each subject, the
+              names a consumer puts in its `additionalMounts[].auth`.
             nullable: true
             properties:
               conditions:
@@ -226,6 +229,9 @@ spec:
                 format: int64
                 nullable: true
                 type: integer
+              policy:
+                nullable: true
+                type: string
               remoteId:
                 description: |-
                   Identifier of the remote object, as Openbao returned it. Its
@@ -233,6 +239,11 @@ spec:
                   finalizer only deletes what is recorded here.
                 nullable: true
                 type: string
+              roles:
+                description: '`grant_<name>_<index>`, in the order of `subjects`.'
+                items:
+                  type: string
+                type: array
             type: object
         required:
         - spec

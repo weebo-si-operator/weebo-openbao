@@ -19,7 +19,7 @@ use crate::status::Status;
     version = "v1alpha1",
     kind = "OpenbaoAccessGrant",
     plural = "openbaoaccessgrants",
-    status = "Status",
+    status = "GrantStatus",
     printcolumn = r#"{"name":"Namespace","type":"string","jsonPath":".spec.namespace"}"#,
     printcolumn = r#"{"name":"Ready","type":"string","jsonPath":".status.conditions[?(@.type=='Ready')].status"}"#,
     printcolumn = r#"{"name":"Reason","type":"string","jsonPath":".status.conditions[?(@.type=='Ready')].reason"}"#
@@ -129,6 +129,20 @@ pub struct GrantRule {
     /// The `OpenbaoAccessLevel`.
     #[schemars(length(min = 1, max = 253))]
     pub level: String,
+}
+
+/// What the grant wrote: its policy and the role of each subject, the
+/// names a consumer puts in its `additionalMounts[].auth`.
+#[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct GrantStatus {
+    #[serde(flatten)]
+    pub common: Status,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub policy: Option<String>,
+    /// `grant_<name>_<index>`, in the order of `subjects`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub roles: Vec<String>,
 }
 
 fn default_machine_ttl() -> u32 {

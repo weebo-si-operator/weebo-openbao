@@ -34,6 +34,7 @@ pub use weebo_kit_runtime::Shutdown;
 /// liveness.
 pub use weebo_kit_runtime::controller::{controller, drive};
 
+pub mod grant;
 pub mod instance;
 pub mod namespace;
 pub mod organization;
@@ -90,6 +91,12 @@ pub fn spawn_watches(client: &Client, scope: &WatchScope, health: &Arc<Health>) 
             scope,
             health,
             "OpenbaoOrganization watch",
+        );
+        watches.spawn(
+            scope.api::<api::OpenbaoAccessGrant>(client.clone()),
+            scope,
+            health,
+            "OpenbaoAccessGrant watch",
         );
     }
     watches
@@ -183,6 +190,12 @@ pub trait HasStatus {
 impl HasStatus for api::Instance {
     fn status(&self) -> Option<&Status> {
         self.status.as_ref()
+    }
+}
+
+impl HasStatus for api::OpenbaoAccessGrant {
+    fn status(&self) -> Option<&Status> {
+        self.status.as_ref().map(|s| &s.common)
     }
 }
 

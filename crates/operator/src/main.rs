@@ -143,6 +143,7 @@ async fn run(telemetry: &telemetry::Telemetry) -> anyhow::Result<()> {
                 controller::instance::run(client.clone(), ctx.clone()),
                 controller::namespace::run(client.clone(), ctx.clone()),
                 controller::organization::run(client.clone(), ctx.clone()),
+                controller::grant::run(client.clone(), ctx.clone()),
             );
         }
     };
