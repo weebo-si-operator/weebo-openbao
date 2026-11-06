@@ -5,14 +5,18 @@
 use std::sync::Arc;
 use std::time::Instant;
 
-use api::OpenbaoAccessLevel;
+use std::collections::BTreeMap;
+
+use api::{OpenbaoAccessGrant, OpenbaoAccessLevel, OpenbaoSpaceLayout};
 use application::use_cases::Outcome;
 use domain::Failure;
 use domain::error::ReasonCode;
 use kube::api::Api;
 use kube::runtime::controller::Action;
 use kube::runtime::finalizer::{Event as FinalizerEvent, finalizer};
+use kube::runtime::reflector::ObjectRef;
 use kube::{Client, ResourceExt};
+use weebo_kit_runtime::shared::WatchesIn;
 
 use super::{Ctx, Error, IN_USE_FINALIZER, error_policy};
 
@@ -20,9 +24,41 @@ const KIND: &str = "OpenbaoAccessLevel";
 
 pub async fn run(client: Client, ctx: Arc<Ctx>) {
     let health = ctx.health.clone();
+    // A layout or a grant citing a level, changed or deleted, re-triggers
+    // it: a deletion held by `in-use` goes as soon as nothing cites it.
     let results = ctx
         .watches
-        .controller(ctx.scope.api::<OpenbaoAccessLevel>(client), &ctx.scope)
+        .controller(
+            ctx.scope.api::<OpenbaoAccessLevel>(client.clone()),
+            &ctx.scope,
+        )
+        .watches_in(
+            &ctx.watches,
+            &ctx.scope,
+            &client,
+            |layout: OpenbaoSpaceLayout| {
+                layout
+                    .spec
+                    .roles
+                    .into_values()
+                    .flat_map(BTreeMap::into_values)
+                    .map(|level| ObjectRef::new(&level))
+                    .collect::<Vec<_>>()
+            },
+        )
+        .watches_in(
+            &ctx.watches,
+            &ctx.scope,
+            &client,
+            |grant: OpenbaoAccessGrant| {
+                grant
+                    .spec
+                    .rules
+                    .into_iter()
+                    .map(|r| ObjectRef::new(&r.level))
+                    .collect::<Vec<_>>()
+            },
+        )
         .graceful_shutdown_on(ctx.shutdown.wait())
         .run(reconcile, error_policy, ctx);
     super::drive(KIND, health, results).await;

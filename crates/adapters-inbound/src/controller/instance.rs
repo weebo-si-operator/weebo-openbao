@@ -6,12 +6,14 @@
 use std::sync::Arc;
 use std::time::Instant;
 
-use api::Instance;
+use api::{Instance, OpenbaoAccessGrant, OpenbaoNamespace, OpenbaoSpaceLayout};
 use application::use_cases::Outcome;
 use application::use_cases::reconcile_instance::reconcile_instance;
 use kube::api::Api;
 use kube::runtime::controller::Action;
+use kube::runtime::reflector::ObjectRef;
 use kube::{Client, ResourceExt};
+use weebo_kit_runtime::shared::WatchesIn;
 
 use domain::Failure;
 use domain::error::ReasonCode;
@@ -23,9 +25,26 @@ const KIND: &str = "OpenbaoInstance";
 
 pub async fn run(client: Client, ctx: Arc<Ctx>) {
     let health = ctx.health.clone();
+    // What names an instance, changed or deleted, re-triggers it: a
+    // deletion held by `in-use` goes as soon as nothing names it.
     let results = ctx
         .watches
-        .controller(ctx.scope.api::<Instance>(client), &ctx.scope)
+        .controller(ctx.scope.api::<Instance>(client.clone()), &ctx.scope)
+        .watches_in(&ctx.watches, &ctx.scope, &client, |n: OpenbaoNamespace| {
+            Some(ObjectRef::new(&n.spec.instance_ref.name))
+        })
+        .watches_in(
+            &ctx.watches,
+            &ctx.scope,
+            &client,
+            |l: OpenbaoSpaceLayout| Some(ObjectRef::new(&l.spec.instance_ref.name)),
+        )
+        .watches_in(
+            &ctx.watches,
+            &ctx.scope,
+            &client,
+            |g: OpenbaoAccessGrant| Some(ObjectRef::new(&g.spec.instance_ref.name)),
+        )
         .graceful_shutdown_on(ctx.shutdown.wait())
         .run(reconcile, error_policy, ctx);
     super::drive(KIND, health, results).await;
