@@ -16,7 +16,7 @@ version = "0.1.2"
 edition = "2024"
 license = "Apache-2.0"
 publish = false
-repository = "https://github.com/batleforc/weebo-openbao"
+repository = "https://github.com/weebo-si-operator/weebo-openbao"
 
 [workspace.dependencies]
 domain = { path = "crates/domain" }

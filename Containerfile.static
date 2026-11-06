@@ -46,7 +46,7 @@ USER 65532:65532
 
 LABEL org.opencontainers.image.title="weebo-openbao-operator" \
       org.opencontainers.image.description="Kubernetes operator managing Openbao objects as CRDs (static)" \
-      org.opencontainers.image.source="https://github.com/batleforc/weebo-openbao" \
+      org.opencontainers.image.source="https://github.com/weebo-si-operator/weebo-openbao" \
       org.opencontainers.image.licenses="Apache-2.0" \
       org.opencontainers.image.vendor="batleforc"
 
