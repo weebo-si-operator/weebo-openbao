@@ -3,10 +3,18 @@
 Kubernetes operator managing Openbao objects as CRDs, built on
 [weebo-operator-kit](https://github.com/weebo-si-operator/weebo-operator-kit).
 
-| Kind                | Scope      | What it does                                                       |
-| ------------------- | ---------- | ------------------------------------------------------------------ |
-| `OpenbaoInstance` | Cluster    | A Openbao to drive: its URL and API token (`tokenSecretRef`) |
-| `OpenbaoObject`   | Namespaced | An object of that Openbao, created, updated and deleted with the CR |
+| Kind                  | What it does                                                                 |
+| --------------------- | ---------------------------------------------------------------------------- |
+| `OpenbaoInstance`     | The OpenBao server and the operator's login (Kubernetes auth, root)          |
+| `OpenbaoNamespace`    | An OpenBao namespace: its KV v2 mounts (`orgs`, `users`) and auth backends   |
+| `OpenbaoAccessLevel`  | A level of access (capabilities on data and metadata), shared by both models |
+| `OpenbaoSpaceLayout`  | The human model: role → namespace → level, personal spaces, group aliases    |
+| `OpenbaoOrganization` | An organization, its access following the layout                             |
+| `OpenbaoAccessGrant`  | The machine model: ServiceAccounts, and the rules they get in a namespace    |
+
+All cluster-scoped. Design: weebo-operator-kit RFC 0007 (declarative OpenBao
+spaces). The reconcilers of the spaces' kinds are being written; only
+`OpenbaoInstance` is reconciled today.
 
 ## Layout
 
@@ -16,8 +24,8 @@ Hexagonal, one crate per layer, same rules as every weebo operator:
 | ------------------- | ------------------------------------------------------------------------ |
 | `domain`            | the reason codes (`reason_codes!`), no dependency                        |
 | `api`               | the CRD types (`#[derive(CustomResource)]`), the kit's shared field types |
-| `application`       | ports (`RemoteGateway`, `GatewayFactory`) and the `reconcile_*` use cases |
-| `adapters-outbound` | the Openbao HTTP gateway — **the placeholder to replace with the real client** — and its factory |
+| `application`       | the `SpaceAdmin` port and the `reconcile_*` use cases                    |
+| `adapters-outbound` | `OpenbaoSpaceAdmin` on OpenBao's API (the kit's `VaultSession`), and the factory logging in per instance |
 | `adapters-inbound`  | the controllers and the webhook router (health routes only for now)       |
 | `operator`          | the binary: telemetry, leader election, webhook server, controllers      |
 | `crdgen`            | writes `deploy/crd/` from `api` (CRDs, and `links.json` for the CRD IDE)  |
@@ -38,10 +46,6 @@ task doctor   # envtest prerequisites
 task recu     # CRDs (crdgen) and their copies in the chart
 task test:all # unit, contract and envtest tests — creates Cargo.lock: commit it
 ```
-
-Then replace the placeholder REST shape of
-`crates/adapters-outbound/src/http_gateway.rs` with the real
-Openbao API, and grow `OpenbaoObject` into the real kinds.
 
 ## Tasks
 

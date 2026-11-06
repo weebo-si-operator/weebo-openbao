@@ -1,14 +1,11 @@
-//! `OpenbaoInstance` (cluster-scoped): reconciling it is a
-//! connectivity and token check (`reconcile_instance`). No finalizer: there is nothing remote to clean
-//! up. Deleting an instance still in use leaves its objects unable to
-//! clean up — they then need `force-orphan`. A real operator may hold the
-//! deletion with a finalizer while CRs are bound to it.
+//! `OpenbaoInstance` (cluster-scoped): reconciling it checks OpenBao
+//! answers the operator's login (`reconcile_instance`). Its `in-use`
+//! finalizer (decision 21) comes with the kinds that cite it.
 
 use std::sync::Arc;
 use std::time::Instant;
 
 use api::Instance;
-use application::ports::BoundInstance;
 use application::use_cases::Outcome;
 use application::use_cases::reconcile_instance::reconcile_instance;
 use kube::api::Api;
@@ -35,9 +32,8 @@ async fn reconcile(obj: Arc<Instance>, ctx: Arc<Ctx>) -> Result<Action, Error> {
     }
     let api: Api<Instance> = Api::all(ctx.client.clone());
     let started = Instant::now();
-    let bound = BoundInstance::cluster(obj.name_any());
-    let outcome = match ctx.gateways.gateway_for(&bound).await {
-        Ok(gateway) => reconcile_instance(gateway.as_ref()).await,
+    let outcome = match ctx.admins.admin_for(&obj.name_any()).await {
+        Ok(admin) => reconcile_instance(admin.as_ref()).await,
         Err(e) => Outcome::failed(e),
     };
     super::record_reconcile(KIND, started, &outcome);

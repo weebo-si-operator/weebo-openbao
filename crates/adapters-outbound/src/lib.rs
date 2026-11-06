@@ -1,11 +1,8 @@
-//! Outbound adapters: the HTTP client implementing
-//! `application::ports::RemoteGateway`, and the factory building one per
-//! `OpenbaoInstance` or `OpenbaoLocalInstance`.
+//! Outbound adapters: [`OpenbaoSpaceAdmin`], `application::space::SpaceAdmin`
+//! on OpenBao's API, and the factory logging in one per `OpenbaoInstance`.
 
-pub mod gateway_factory;
-pub mod http_gateway;
+pub mod admin_factory;
 pub mod openbao;
 
-pub use gateway_factory::{HttpGatewayFactory, OperatorInstances};
-pub use http_gateway::HttpGateway;
+pub use admin_factory::KubeSpaceAdminFactory;
 pub use openbao::OpenbaoSpaceAdmin;

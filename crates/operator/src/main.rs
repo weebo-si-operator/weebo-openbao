@@ -7,12 +7,11 @@ use std::time::Duration;
 
 use adapters_inbound::controller::{self, Ctx, Shutdown};
 use adapters_inbound::webhook;
-use adapters_outbound::{HttpGatewayFactory, OperatorInstances};
-use api::{Instance, LocalInstance, Object};
+use adapters_outbound::KubeSpaceAdminFactory;
+use api::Instance;
 use kube::Client;
-use kube::api::ApiResource;
 use kube::runtime::events::{Recorder, Reporter};
-use weebo_kit_runtime::shared::{LISTED_TIMEOUT, SharedWatch};
+use weebo_kit_runtime::shared::LISTED_TIMEOUT;
 use weebo_kit_runtime::{Health, WatchScope, leader, telemetry, webhook_server};
 
 /// Default `LEASE_NAME`. Keep it across releases: old and new pods of a
@@ -37,7 +36,6 @@ async fn operator() -> anyhow::Result<()> {
             );
             Ok(())
         }
-        Some("migrate-instance-ref") => migrate_instance_ref().await,
         Some(other) => Err(anyhow::anyhow!("unknown command {other:?}")),
         None => run(&telemetry).await,
     };
@@ -46,40 +44,6 @@ async fn operator() -> anyhow::Result<()> {
     }
     telemetry.shutdown();
     result
-}
-
-/// `migrate-instance-ref [--dry-run]`: rewrites the CRs written when
-/// `spec.instanceRef` was a bare name (`main` → `{name: main}`). Offline:
-/// operator stopped, new CRDs applied, then this, then the operator.
-async fn migrate_instance_ref() -> anyhow::Result<()> {
-    let dry_run = std::env::args().any(|a| a == "--dry-run");
-    // An `Err` only means a provider is installed already.
-    if rustls::crypto::ring::default_provider()
-        .install_default()
-        .is_err()
-    {
-        tracing::debug!("a rustls crypto provider was already installed");
-    }
-    let client = Client::try_default().await?;
-    let kinds = [ApiResource::erase::<Object>(&())];
-    let migration = weebo_kit_adapters::migrate::migrate_instance_refs(
-        &client,
-        &kinds,
-        controller::FIELD_MANAGER,
-        dry_run,
-    )
-    .await
-    .map_err(|e| anyhow::anyhow!(e))?;
-    let verb = if dry_run { "to migrate" } else { "migrated" };
-    for id in &migration.migrated {
-        println!("{verb}: {id}");
-    }
-    println!(
-        "{} {verb}, {} unchanged",
-        migration.migrated.len(),
-        migration.unchanged
-    );
-    Ok(())
 }
 
 async fn run(telemetry: &telemetry::Telemetry) -> anyhow::Result<()> {
@@ -104,8 +68,6 @@ async fn run(telemetry: &telemetry::Telemetry) -> anyhow::Result<()> {
     // `watch.*`): an invalid value stops the start here, as does a kind
     // the scope can't watch.
     let scope = WatchScope::from_env()?;
-    scope.ensure::<LocalInstance>()?;
-    scope.ensure::<Object>()?;
     if scope.cluster_kinds() {
         scope.ensure::<Instance>()?;
     }
@@ -127,23 +89,10 @@ async fn run(telemetry: &telemetry::Telemetry) -> anyhow::Result<()> {
     // keeps them warm, and the controllers start from stores that already
     // listed.
     let watches = controller::spawn_watches(&client, &scope, &health);
-    let cluster_store = watches.get::<Instance>().map(SharedWatch::store);
-    let local_store = watches.get::<LocalInstance>().map(SharedWatch::store);
-    let instances = Arc::new(
-        OperatorInstances::new(client.clone())
-            .with_scope(
-                scope.watched_namespace().map(String::from),
-                scope.selector().cloned(),
-                scope.cluster_kinds(),
-            )
-            .with_stores(cluster_store, local_store),
-    );
-
     let holder_id = std::env::var("HOSTNAME").unwrap_or_else(|_| uuid::Uuid::new_v4().to_string());
     let ctx = Arc::new(Ctx {
         client: client.clone(),
-        gateways: Arc::new(HttpGatewayFactory::new(client.clone(), instances.clone())),
-        instances,
+        admins: Arc::new(KubeSpaceAdminFactory::new(client.clone())),
         recorder: Recorder::new(
             client.clone(),
             Reporter {
@@ -193,11 +142,7 @@ async fn run(telemetry: &telemetry::Telemetry) -> anyhow::Result<()> {
             controller::instance::run(client.clone(), ctx.clone()).await;
         }
     };
-    tokio::join!(
-        cluster_instances,
-        controller::local_instance::run(client.clone(), ctx.clone()),
-        controller::object::run(client.clone(), ctx.clone()),
-    );
+    cluster_instances.await;
     // Every controller returns once the shutdown signal arrived and its
     // in-flight reconciles finished: hand the lease over right away
     // instead of making the next leader wait out the TTL.

@@ -27,12 +27,12 @@ fn main() -> anyhow::Result<()> {
     fs::create_dir_all(&args.out)?;
     let roles = Roles {
         instance: group_kind(&api::Instance::crd()),
-        local_instance: group_kind(&api::LocalInstance::crd()),
+        // No local instance kind: the spaces live on cluster-scoped
+        // instances only.
+        local_instance: group_kind(&api::Instance::crd()),
     };
     let mut kinds = BTreeMap::new();
     write::<api::Instance>(&args.out, &roles, &mut kinds)?;
-    write::<api::LocalInstance>(&args.out, &roles, &mut kinds)?;
-    write::<api::Object>(&args.out, &roles, &mut kinds)?;
     write::<api::OpenbaoNamespace>(&args.out, &roles, &mut kinds)?;
     write::<api::OpenbaoAccessLevel>(&args.out, &roles, &mut kinds)?;
     write::<api::OpenbaoSpaceLayout>(&args.out, &roles, &mut kinds)?;

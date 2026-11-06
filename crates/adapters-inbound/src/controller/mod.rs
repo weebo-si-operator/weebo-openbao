@@ -8,7 +8,7 @@ use std::time::Instant;
 
 use api::Status;
 use api::status::Condition;
-use application::ports::{BoundInstance, GatewayFactory, InstanceDirectory};
+use application::ports::{BoundInstance, SpaceAdminFactory};
 use application::use_cases::Outcome;
 use domain::Failure;
 use domain::error::ReasonCode;
@@ -35,8 +35,6 @@ pub use weebo_kit_runtime::Shutdown;
 pub use weebo_kit_runtime::controller::{controller, drive};
 
 pub mod instance;
-pub mod local_instance;
-pub mod object;
 
 /// Field manager of the status patches, meter and Event reporter name.
 pub const FIELD_MANAGER: &str = "weebo-openbao-operator";
@@ -48,10 +46,8 @@ pub const METRIC_PREFIX: &str = "weebo_openbao";
 /// injected once, in `operator::main` (tests inject fakes).
 pub struct Ctx {
     pub client: Client,
-    pub gateways: Arc<dyn GatewayFactory>,
-    /// Which instance a CR lives on (the kit's `Instances`, on the watch
-    /// scope).
-    pub instances: Arc<dyn InstanceDirectory>,
+    /// The `SpaceAdmin` of an `OpenbaoInstance`, logged in.
+    pub admins: Arc<dyn SpaceAdminFactory>,
     /// One recorder for the whole process: the kit folds repeated Events
     /// into a series only within a recorder.
     pub recorder: Recorder,
@@ -69,9 +65,9 @@ pub struct Ctx {
     pub watches: SharedWatches,
 }
 
-/// One watch per kind, on `scope`, for every controller and the instance
-/// stores (no `OpenbaoInstance` without cluster-scoped kinds). Spawned
-/// before the lease is campaigned for: a standby keeps them warm.
+/// One watch per kind, for every controller. Spawned before the lease is
+/// campaigned for: a standby keeps them warm. Every kind of this operator
+/// is cluster-scoped.
 pub fn spawn_watches(client: &Client, scope: &WatchScope, health: &Arc<Health>) -> SharedWatches {
     let mut watches = SharedWatches::default();
     if scope.cluster_kinds() {
@@ -82,18 +78,6 @@ pub fn spawn_watches(client: &Client, scope: &WatchScope, health: &Arc<Health>) 
             "OpenbaoInstance watch",
         );
     }
-    watches.spawn(
-        scope.api::<api::LocalInstance>(client.clone()),
-        scope,
-        health,
-        "OpenbaoLocalInstance watch",
-    );
-    watches.spawn(
-        scope.api::<api::Object>(client.clone()),
-        scope,
-        health,
-        "OpenbaoObject watch",
-    );
     watches
 }
 
@@ -183,18 +167,6 @@ pub trait HasStatus {
 }
 
 impl HasStatus for api::Instance {
-    fn status(&self) -> Option<&Status> {
-        self.status.as_ref()
-    }
-}
-
-impl HasStatus for api::LocalInstance {
-    fn status(&self) -> Option<&Status> {
-        self.status.as_ref()
-    }
-}
-
-impl HasStatus for api::Object {
     fn status(&self) -> Option<&Status> {
         self.status.as_ref()
     }

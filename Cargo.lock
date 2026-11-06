@@ -2230,7 +2230,6 @@ dependencies = [
  "tokio",
  "tracing",
  "uuid",
- "weebo-kit-adapters",
  "weebo-kit-runtime",
 ]
 

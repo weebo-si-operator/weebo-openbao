@@ -9,20 +9,20 @@ versions: [v1alpha1]
 # Every kind the operator watches (ClusterRole).
 kinds:
   - openbaoinstances
-  - openbaolocalinstances
-  - openbaoobjects
-# The namespaced kinds: what a team may manage (rbac.namespacedExample),
-# and the watch Role's (watch.namespace).
-namespacedKinds:
-  - openbaolocalinstances
-  - openbaoobjects
+  - openbaonamespaces
+  - openbaoaccesslevels
+  - openbaospacelayouts
+  - openbaoorganizations
+  - openbaoaccessgrants
+# The namespaced kinds: none, every kind is cluster-scoped (RFC 0007 §6.6).
+namespacedKinds: []
 # Kinds the admission webhook checks: none until the operator serves
 # `/validate` (a namespace allow-list).
 admitted: []
 # The operator's own environment variables.
 env: []
 egress:
-  - comment: Openbao instances.
+  - comment: OpenBao.
     rules: {{ toJson .Values.networkPolicy.egress.openbao }}
 # Alerts on the operator's own metrics, appended to the kit's.
 alerts: []

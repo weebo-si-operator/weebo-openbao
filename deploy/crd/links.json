@@ -12,21 +12,7 @@
       "produces": [],
       "references": [
         {
-          "path": "spec.tokenSecretRef",
-          "to": [
-            {
-              "group": "",
-              "kind": "Secret"
-            }
-          ]
-        }
-      ]
-    },
-    "OpenbaoLocalInstance": {
-      "produces": [],
-      "references": [
-        {
-          "path": "spec.tokenSecretRef",
+          "path": "spec.tls.caSecretRef",
           "to": [
             {
               "group": "",
@@ -45,24 +31,6 @@
             {
               "group": "",
               "kind": "Secret"
-            }
-          ]
-        }
-      ]
-    },
-    "OpenbaoObject": {
-      "produces": [],
-      "references": [
-        {
-          "path": "spec.instanceRef",
-          "to": [
-            {
-              "group": "openbao.weebo.io",
-              "kind": "OpenbaoInstance"
-            },
-            {
-              "group": "openbao.weebo.io",
-              "kind": "OpenbaoLocalInstance"
             }
           ]
         }

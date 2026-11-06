@@ -11,8 +11,8 @@ spec:
   scope: Cluster
   versions:
   - additionalPrinterColumns:
-    - jsonPath: .spec.url
-      name: URL
+    - jsonPath: .spec.address
+      name: Address
       type: string
     - jsonPath: .status.conditions[?(@.type=='Ready')].status
       name: Ready
@@ -27,33 +27,80 @@ spec:
         properties:
           spec:
             description: |-
-              Connection to one Openbao server. Cluster-scoped: an org-wide piece
-              of infrastructure, not owned by a namespace (a namespace's own server
-              is a `OpenbaoLocalInstance`). `Ready` tells whether the server
-              answers with the token below.
+              The OpenBao server the spaces live on, and the operator's login there:
+              Kubernetes auth in the root, with the operator's ServiceAccount (no
+              static token). `Ready` tells whether OpenBao answers and accepts the
+              login.
             properties:
-              tokenSecretRef:
-                description: |-
-                  The API token the operator authenticates with. Read on every
-                  reconcile: rotating it needs no restart.
-                properties:
-                  key:
-                    type: string
-                  name:
-                    type: string
-                  namespace:
-                    type: string
-                required:
-                - key
-                - name
-                - namespace
-                type: object
-              url:
-                description: Base URL of the Openbao server, e.g. `https://example.com`.
+              address:
+                description: OpenBao's address, e.g. `https://openbao.vault:8200`. `https` only.
+                maxLength: 256
+                pattern: ^https://[^\s/]+(:[0-9]+)?/?$
                 type: string
+              auth:
+                description: The operator's login.
+                properties:
+                  kubernetes:
+                    description: Kubernetes auth in OpenBao's root namespace.
+                    properties:
+                      mount:
+                        default: kubernetes
+                        maxLength: 128
+                        minLength: 1
+                        type: string
+                      role:
+                        maxLength: 128
+                        minLength: 1
+                        type: string
+                    required:
+                    - role
+                    type: object
+                required:
+                - kubernetes
+                type: object
+              bounds:
+                default:
+                  namespaces: []
+                description: |-
+                  The OpenBao namespaces the operator's bootstrap policy lets it write
+                  to: an `OpenbaoNamespace` outside them is refused before any call.
+                  It can't widen anything, the policy stays the bound.
+                properties:
+                  namespaces:
+                    default: []
+                    items:
+                      maxLength: 16
+                      pattern: ^[a-z]([a-z0-9-]{0,14}[a-z0-9])?$
+                      type: string
+                    maxItems: 16
+                    type: array
+                type: object
+              tls:
+                description: |-
+                  The CA of OpenBao's certificate, `None` for the system trust store.
+                  No option turns the verification off.
+                nullable: true
+                properties:
+                  caSecretRef:
+                    description: The PEM bundle, in a key of a Secret.
+                    properties:
+                      key:
+                        type: string
+                      name:
+                        type: string
+                      namespace:
+                        type: string
+                    required:
+                    - key
+                    - name
+                    - namespace
+                    type: object
+                required:
+                - caSecretRef
+                type: object
             required:
-            - tokenSecretRef
-            - url
+            - address
+            - auth
             type: object
           status:
             nullable: true

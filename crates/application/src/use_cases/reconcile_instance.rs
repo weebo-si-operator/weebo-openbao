@@ -1,13 +1,13 @@
-//! A `OpenbaoInstance` has no remote object: reconciling it is a
-//! connectivity and token check, whose result every CR bound to it
-//! implicitly depends on.
+//! An `OpenbaoInstance` has nothing to write: reconciling it checks that
+//! OpenBao answers and accepts the operator's login, which every CR on it
+//! depends on.
 
-use crate::ports::RemoteGateway;
+use crate::ports::SpaceAdmin;
 use crate::use_cases::Outcome;
 
-pub async fn reconcile_instance(gateway: &dyn RemoteGateway) -> Outcome {
-    match gateway.ping().await {
-        Ok(()) => Outcome::synced(None, "Openbao answers"),
+pub async fn reconcile_instance(admin: &dyn SpaceAdmin) -> Outcome {
+    match admin.check().await {
+        Ok(()) => Outcome::synced(None, "OpenBao answers the operator's login"),
         Err(e) => Outcome::failed(e),
     }
 }
@@ -17,28 +17,27 @@ mod tests {
     use domain::error::ReasonCode;
 
     use super::*;
-    use crate::ports::GatewayError;
-    use crate::test_support::FakeGateway;
+    use crate::ports::OpenbaoError;
+    use crate::test_support::FakeSpaceAdmin;
 
     #[tokio::test]
     async fn a_reachable_instance_is_ready() {
-        let outcome = reconcile_instance(&FakeGateway::default()).await;
+        let outcome = reconcile_instance(&FakeSpaceAdmin::default()).await;
         assert_eq!(outcome.reason(), ReasonCode::Reconciled);
-        assert_eq!(outcome.remote_id, None);
     }
 
     #[tokio::test]
-    async fn an_unreachable_or_refusing_instance_is_not() {
-        let gateway = FakeGateway::default();
-        gateway.fail_with(Some(GatewayError::Unreachable("dns".into())));
+    async fn a_sealed_or_refusing_instance_is_not() {
+        let admin = FakeSpaceAdmin::default();
+        admin.fail_with(Some(OpenbaoError::Sealed("503".into())));
         assert_eq!(
-            reconcile_instance(&gateway).await.reason(),
-            ReasonCode::InstanceUnreachable
+            reconcile_instance(&admin).await.reason(),
+            ReasonCode::VaultSealed
         );
-        gateway.fail_with(Some(GatewayError::Unauthorized("401".into())));
+        admin.fail_with(Some(OpenbaoError::PermissionDenied("403".into())));
         assert_eq!(
-            reconcile_instance(&gateway).await.reason(),
-            ReasonCode::InstanceUnauthorized
+            reconcile_instance(&admin).await.reason(),
+            ReasonCode::PermissionDenied
         );
     }
 }
