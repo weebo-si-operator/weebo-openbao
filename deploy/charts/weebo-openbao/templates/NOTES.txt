@@ -1,8 +1,10 @@
 {{ include "weebo-operator.notes" . }}
 
-1. Connect a Openbao with an API token:
+1. In OpenBao, as root (Terraform): the policy `weebo_openbao_operator` and a
+   Kubernetes auth role bound to the ServiceAccount
+   {{ .Release.Namespace }}/{{ include "weebo-operator.serviceAccountName" . }}.
 
-     kubectl -n {{ .Release.Namespace }} create secret generic openbao-admin --from-literal=token=<token>
+2. Point the operator at it:
 
      kubectl apply -f - <<YAML
      apiVersion: openbao.weebo.io/v1alpha1
@@ -10,15 +12,17 @@
      metadata:
        name: main
      spec:
-       url: https://openbao.example.com
-       tokenSecretRef:
-         namespace: {{ .Release.Namespace }}
-         name: openbao-admin
-         key: token
+       address: https://openbao.example.com:8200
+       auth:
+         kubernetes: {mount: kubernetes, role: weebo-openbao}
+       bounds:
+         namespaces: [devenv, prod]
      YAML
 
-2. Then declare OpenbaoObject resources referencing it
-   (`spec.instanceRef: main`).
+3. Then declare OpenbaoNamespace, OpenbaoAccessLevel, OpenbaoSpaceLayout,
+   OpenbaoOrganization and OpenbaoAccessGrant resources referencing it.
+   Secrets they name (OIDC client secrets, the CA) are read in
+   {{ .Release.Namespace }} only, if listed in `releaseSecrets`.
 
 Argo CD: paste the health check of the
 {{ include "weebo-operator.fullname" . }}-argocd-health ConfigMap into argocd-cm under

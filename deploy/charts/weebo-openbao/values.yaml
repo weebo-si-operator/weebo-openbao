@@ -60,9 +60,8 @@ watch:
   labelSelector: {}
   # -- `false`: full namespaced (env WEEBO_WATCH_CLUSTER_KINDS) — no
   # cluster-scoped kind watched, no ClusterRole, no
-  # ValidatingWebhookConfiguration; objects use the LocalInstances of
-  # `namespace`. Needs `namespace` and `crds.install: false` (a cluster
-  # admin installs the CRDs).
+  # ValidatingWebhookConfiguration. Every kind of this operator is
+  # cluster-scoped: `false` leaves it nothing to watch.
   clusterKinds: true
 
 references:

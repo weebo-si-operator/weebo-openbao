@@ -9,9 +9,7 @@ weebo_kit_domain::reason_codes! {
     pub enum ReasonCode {
         /// `Ready: True` — the one success reason every reconciler uses.
         Reconciled,
-        /// `spec.instanceRef` names no `OpenbaoInstance` nor
-        /// `OpenbaoLocalInstance` the operator sees (or, unset, there is
-        /// none to default to).
+        /// `spec.instanceRef` names no `OpenbaoInstance` the operator sees.
         InstanceNotFound,
         /// `spec.instanceRef` is unset and several instances could serve
         /// the object.
