@@ -254,6 +254,14 @@ spec:
                 - kind
                 - name
                 type: object
+              leftOver:
+                description: |-
+                  Policies and groups marked for an organization or a grant that no
+                  longer exists (`policy <name>`, `group <name>`); removed under
+                  `allow-disruptive-update` on the namespace.
+                items:
+                  type: string
+                type: array
               observedGeneration:
                 description: The `metadata.generation` the last successful reconcile applied.
                 format: int64

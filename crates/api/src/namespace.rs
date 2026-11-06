@@ -21,6 +21,11 @@ pub struct NamespaceStatus {
     /// Backends this operator enabled, no longer declared, left enabled.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub orphaned_auth: Vec<String>,
+    /// Policies and groups marked for an organization or a grant that no
+    /// longer exists (`policy <name>`, `group <name>`); removed under
+    /// `allow-disruptive-update` on the namespace.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub left_over: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, Eq, JsonSchema)]

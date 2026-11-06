@@ -32,6 +32,12 @@ pub struct NamespaceInput<'a> {
     pub written_digests: &'a BTreeMap<String, String>,
     /// The layout's personal spaces, for a `users` namespace.
     pub users: Option<&'a UsersSpaces>,
+    /// `Kind/name` of every organization and grant that exists: an object
+    /// marked for another owner is left over (decision 20).
+    pub live_owners: &'a std::collections::BTreeSet<String>,
+    /// `allow-disruptive-update` on the namespace: left-over objects are
+    /// removed (alias, group, policy), not only reported.
+    pub allow_disruptive: bool,
 }
 
 /// An auth backend as it ended up.
@@ -49,6 +55,9 @@ pub struct NamespaceReport {
     pub auth: Vec<AuthReport>,
     pub orphaned_mounts: Vec<String>,
     pub orphaned_auth: Vec<String>,
+    /// Policies and groups marked for an organization or a grant that no
+    /// longer exists (`policy <name>`, `group <name>`).
+    pub left_over: Vec<String>,
 }
 
 impl NamespaceReport {
@@ -58,6 +67,7 @@ impl NamespaceReport {
             auth: vec![],
             orphaned_mounts: vec![],
             orphaned_auth: vec![],
+            left_over: vec![],
         }
     }
 }
@@ -277,11 +287,27 @@ async fn run(
         .map(|(name, _)| name.clone())
         .collect();
 
+    let left_over = left_overs(admin, ns, input).await?;
+    if input.allow_disruptive && !left_over.is_empty() {
+        write = Some(RemoteWrite::Deleted);
+    }
+
     let mut outcome = match failure {
         Some(f) => Outcome::failed(f),
         None => Outcome::synced(None, format!("namespace {ns} in place")),
     };
     outcome.write = write;
+    for object in &left_over {
+        let what = if input.allow_disruptive {
+            "removed"
+        } else {
+            "left in place"
+        };
+        outcome = outcome.advise(
+            ReasonCode::LeftOver,
+            format!("{object} of {ns} belongs to no existing organization or grant: {what}"),
+        );
+    }
     for mount in &orphaned_mounts {
         outcome = outcome.advise(
             ReasonCode::MountOrphaned,
@@ -299,7 +325,63 @@ async fn run(
         auth: reports,
         orphaned_mounts,
         orphaned_auth,
+        left_over,
     })
+}
+
+/// The owner a policy's first line names, if it is this operator's mark.
+fn policy_owner(text: &str) -> Option<&str> {
+    text.lines()
+        .next()?
+        .strip_prefix("# managed-by: weebo-openbao owner: ")
+}
+
+/// Decision 20: the `org_*` and `grant_*` policies and the `org_*` groups
+/// of `ns` marked for an owner that no longer exists, removed (alias,
+/// group, then policy) under `allow_disruptive`. Names only are listed.
+async fn left_overs(
+    admin: &dyn SpaceAdmin,
+    ns: &str,
+    input: &NamespaceInput<'_>,
+) -> Result<Vec<String>, Failure> {
+    let dead = |owner: &str| {
+        (owner.starts_with("OpenbaoOrganization/") || owner.starts_with("OpenbaoAccessGrant/"))
+            && !input.live_owners.contains(owner)
+    };
+    let mut left = Vec::new();
+    for name in admin.list_groups(ns).await? {
+        if !name.starts_with("org_") {
+            continue;
+        }
+        let Some(group) = admin.read_group(ns, &name).await? else {
+            continue;
+        };
+        let marked = group.metadata.get("managed-by").map(String::as_str) == Some("weebo-openbao");
+        if marked && group.metadata.get("owner").is_some_and(|o| dead(o)) {
+            if input.allow_disruptive {
+                if let Some(alias) = &group.alias {
+                    admin.delete_group_alias(ns, &alias.id).await?;
+                }
+                admin.delete_group(ns, &name).await?;
+            }
+            left.push(format!("group {name}"));
+        }
+    }
+    for name in admin.list_policies(ns).await? {
+        if !(name.starts_with("org_") || name.starts_with("grant_")) {
+            continue;
+        }
+        let Some(text) = admin.read_policy(ns, &name).await? else {
+            continue;
+        };
+        if policy_owner(&text).is_some_and(dead) {
+            if input.allow_disruptive {
+                admin.delete_policy(ns, &name).await?;
+            }
+            left.push(format!("policy {name}"));
+        }
+    }
+    Ok(left)
 }
 
 #[cfg(test)]
@@ -340,6 +422,7 @@ mod tests {
     }
 
     struct Fixture {
+        live: std::collections::BTreeSet<String>,
         bounds: Vec<String>,
         secrets: BTreeMap<String, (String, String)>,
         users: UsersSpaces,
@@ -347,6 +430,7 @@ mod tests {
 
     fn fixture() -> Fixture {
         Fixture {
+            live: std::collections::BTreeSet::from(["OpenbaoOrganization/acme".to_string()]),
             bounds: vec!["prod".into(), "users".into()],
             secrets: BTreeMap::from([("authentik".into(), ("s3cret".into(), "sha-1".into()))]),
             users: UsersSpaces {
@@ -371,6 +455,8 @@ mod tests {
             client_secrets: &f.secrets,
             written_digests: digests,
             users: Some(&f.users),
+            live_owners: &f.live,
+            allow_disruptive: false,
         }
     }
 
@@ -543,6 +629,76 @@ mod tests {
             admin.writes().is_empty(),
             "nothing disabled: {:?}",
             admin.writes()
+        );
+    }
+
+    #[tokio::test]
+    async fn left_overs_are_reported_then_removed_when_allowed() {
+        let f = fixture();
+        let admin = FakeSpaceAdmin::default();
+        let mark = |owner: &str| {
+            BTreeMap::from([
+                ("managed-by".to_string(), "weebo-openbao".to_string()),
+                ("owner".to_string(), owner.to_string()),
+            ])
+        };
+        admin.edit("prod", |n| {
+            n.policies.insert(
+                "org_gone_dev".into(),
+                "# managed-by: weebo-openbao owner: OpenbaoOrganization/gone\n".into(),
+            );
+            n.policies.insert(
+                "org_acme_dev".into(),
+                "# managed-by: weebo-openbao owner: OpenbaoOrganization/acme\n".into(),
+            );
+            n.policies
+                .insert("org_by_hand".into(), "path \"x\" {}\n".into());
+            n.groups.insert(
+                "org_gone_dev_idp".into(),
+                crate::ports::Group {
+                    id: "g".into(),
+                    policies: vec!["org_gone_dev".into()],
+                    metadata: mark("OpenbaoOrganization/gone"),
+                    alias: Some(crate::ports::GroupAlias {
+                        id: "a".into(),
+                        name: "gone_dev".into(),
+                        mount_accessor: "x".into(),
+                    }),
+                },
+            );
+        });
+        let none = BTreeMap::new();
+        let mut input = input(&f, "prod", &[SpaceType::Orgs], &[], &none);
+        let report = reconcile_namespace(&admin, &input).await;
+        assert_eq!(
+            report.left_over,
+            ["group org_gone_dev_idp", "policy org_gone_dev"]
+        );
+        assert_eq!(report.outcome.reason(), ReasonCode::Reconciled);
+        assert!(
+            admin
+                .namespace("prod")
+                .unwrap()
+                .policies
+                .contains_key("org_gone_dev"),
+            "only reported"
+        );
+        input.allow_disruptive = true;
+        admin.clear_writes();
+        reconcile_namespace(&admin, &input).await;
+        let writes = admin.writes();
+        assert_eq!(
+            writes,
+            [
+                "delete alias prod/a",
+                "delete group prod/org_gone_dev_idp",
+                "delete policy prod/org_gone_dev"
+            ]
+        );
+        let state = admin.namespace("prod").unwrap();
+        assert!(
+            state.policies.contains_key("org_acme_dev")
+                && state.policies.contains_key("org_by_hand")
         );
     }
 }

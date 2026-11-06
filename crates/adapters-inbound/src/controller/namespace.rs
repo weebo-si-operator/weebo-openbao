@@ -7,7 +7,9 @@ use std::sync::Arc;
 use std::time::Instant;
 
 use api::namespace::AuthStatus;
-use api::{Instance, OpenbaoNamespace, OpenbaoSpaceLayout};
+use api::{
+    Instance, OpenbaoAccessGrant, OpenbaoNamespace, OpenbaoOrganization, OpenbaoSpaceLayout,
+};
 use application::use_cases::Outcome;
 use application::use_cases::reconcile_namespace::{NamespaceInput, reconcile_namespace};
 use domain::Failure;
@@ -82,6 +84,15 @@ async fn reconcile(obj: Arc<OpenbaoNamespace>, ctx: Arc<Ctx>) -> Result<Action, 
                 .filter(|l| &l.spec.instance_ref.name == instance_name)
                 .find_map(|l| l.spec.users);
             let secrets = client_secrets(&ctx.client, &obj).await;
+            let orgs: Api<OpenbaoOrganization> = Api::all(ctx.client.clone());
+            let grants: Api<OpenbaoAccessGrant> = Api::all(ctx.client.clone());
+            let mut live = std::collections::BTreeSet::new();
+            for o in orgs.list(&ListParams::default()).await?.items {
+                live.insert(format!("OpenbaoOrganization/{}", o.name_any()));
+            }
+            for g in grants.list(&ListParams::default()).await?.items {
+                live.insert(format!("OpenbaoAccessGrant/{}", g.name_any()));
+            }
             let written: BTreeMap<String, String> = obj
                 .status
                 .iter()
@@ -101,6 +112,8 @@ async fn reconcile(obj: Arc<OpenbaoNamespace>, ctx: Arc<Ctx>) -> Result<Action, 
                             client_secrets: &secrets,
                             written_digests: &written,
                             users: users.as_ref(),
+                            live_owners: &live,
+                            allow_disruptive: api::ANNOTATIONS.allows_disruptive_update(obj.meta()),
                         },
                     )
                     .await;
@@ -125,6 +138,10 @@ async fn reconcile(obj: Arc<OpenbaoNamespace>, ctx: Arc<Ctx>) -> Result<Action, 
                     extra.insert(
                         "orphanedAuth".into(),
                         value(serde_json::to_value(&report.orphaned_auth))?,
+                    );
+                    extra.insert(
+                        "leftOver".into(),
+                        value(serde_json::to_value(&report.left_over))?,
                     );
                     report.outcome
                 }

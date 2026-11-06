@@ -335,6 +335,7 @@ async fn the_spaces_reconcile_on_a_real_openbao_and_stay_quiet() {
     }];
     let none = BTreeMap::new();
     let no_digest = BTreeMap::new();
+    let live_owners = std::collections::BTreeSet::new();
     let ns_input = NamespaceInput {
         name: "devenv",
         types: &[SpaceType::Orgs],
@@ -343,6 +344,8 @@ async fn the_spaces_reconcile_on_a_real_openbao_and_stay_quiet() {
         client_secrets: &none,
         written_digests: &no_digest,
         users: None,
+        live_owners: &live_owners,
+        allow_disruptive: false,
     };
     let ns = reconcile_namespace(&admin, &ns_input).await;
     assert_eq!(
@@ -478,6 +481,48 @@ async fn the_spaces_reconcile_on_a_real_openbao_and_stay_quiet() {
     assert!(
         policy.contains("metadata.service_account_namespace}}/*"),
         "{policy}"
+    );
+
+    // Decision 20: with no live owner, the organization's and the grant's
+    // objects are found by name (the operator's two `list` rights), then
+    // removed under allow-disruptive-update.
+    let reported = reconcile_namespace(&admin, &ns_input).await;
+    assert!(
+        reported
+            .left_over
+            .contains(&"group org_acme_dev_idp".to_string()),
+        "{:?}",
+        reported.left_over
+    );
+    assert!(
+        reported
+            .left_over
+            .contains(&"policy grant_repo-workloads-read-own".to_string()),
+        "{:?}",
+        reported.left_over
+    );
+    let removed = reconcile_namespace(
+        &admin,
+        &NamespaceInput {
+            allow_disruptive: true,
+            ..ns_input
+        },
+    )
+    .await;
+    assert_eq!(removed.left_over.len(), reported.left_over.len());
+    assert!(
+        admin
+            .read_group("devenv", "org_acme_dev_idp")
+            .await
+            .unwrap()
+            .is_none()
+    );
+    assert!(
+        admin
+            .read_policy("devenv", "org_acme_dev")
+            .await
+            .unwrap()
+            .is_none()
     );
 
     // The bootstrap policy's refusals, through the operator's own login.

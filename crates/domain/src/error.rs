@@ -83,6 +83,10 @@ weebo_kit_domain::reason_codes! {
         /// An auth backend this operator enabled, no longer declared: left
         /// in place (the operator never disables a backend).
         AuthOrphaned,
+        /// A policy or a group marked for an organization or a grant that
+        /// no longer exists (decision 20): reported, and removed under
+        /// `allow-disruptive-update` on the namespace.
+        LeftOver,
         /// A Kubernetes API call of the operator itself failed (reading a
         /// CR or a Secret, patching a status, the finalizer) — retried.
         KubernetesApiError,
@@ -128,7 +132,8 @@ impl ReasonCode {
             | ReasonCode::Deleted
             | ReasonCode::Released
             | ReasonCode::MountOrphaned
-            | ReasonCode::AuthOrphaned => Severity::Advisory,
+            | ReasonCode::AuthOrphaned
+            | ReasonCode::LeftOver => Severity::Advisory,
             _ => Severity::Blocking,
         }
     }
@@ -155,6 +160,7 @@ mod tests {
                 &ReasonCode::Reconciled,
                 &ReasonCode::MountOrphaned,
                 &ReasonCode::AuthOrphaned,
+                &ReasonCode::LeftOver,
                 &ReasonCode::Created,
                 &ReasonCode::DriftCorrected,
                 &ReasonCode::Deleted,
