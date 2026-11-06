@@ -35,13 +35,18 @@ pub use weebo_kit_runtime::Shutdown;
 pub use weebo_kit_runtime::controller::{controller, drive};
 
 pub mod grant;
+pub mod in_use;
 pub mod instance;
+pub mod layout;
+pub mod level;
 pub mod namespace;
 pub mod organization;
 
 /// Field manager of the status patches, meter and Event reporter name.
 pub const FIELD_MANAGER: &str = "weebo-openbao-operator";
 pub const FINALIZER: &str = "openbao.weebo.io/finalizer";
+/// Holds an instance or a level while other CRs cite it (decision 21).
+pub const IN_USE_FINALIZER: &str = "openbao.weebo.io/in-use";
 /// Prefix of every metric: `<prefix>_reconcile_total`, `<prefix>_leader`…
 pub const METRIC_PREFIX: &str = "weebo_openbao";
 
@@ -91,6 +96,18 @@ pub fn spawn_watches(client: &Client, scope: &WatchScope, health: &Arc<Health>) 
             scope,
             health,
             "OpenbaoOrganization watch",
+        );
+        watches.spawn(
+            scope.api::<api::OpenbaoAccessLevel>(client.clone()),
+            scope,
+            health,
+            "OpenbaoAccessLevel watch",
+        );
+        watches.spawn(
+            scope.api::<api::OpenbaoSpaceLayout>(client.clone()),
+            scope,
+            health,
+            "OpenbaoSpaceLayout watch",
         );
         watches.spawn(
             scope.api::<api::OpenbaoAccessGrant>(client.clone()),
@@ -188,6 +205,18 @@ pub trait HasStatus {
 }
 
 impl HasStatus for api::Instance {
+    fn status(&self) -> Option<&Status> {
+        self.status.as_ref()
+    }
+}
+
+impl HasStatus for api::OpenbaoAccessLevel {
+    fn status(&self) -> Option<&Status> {
+        self.status.as_ref()
+    }
+}
+
+impl HasStatus for api::OpenbaoSpaceLayout {
     fn status(&self) -> Option<&Status> {
         self.status.as_ref()
     }

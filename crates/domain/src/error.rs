@@ -73,6 +73,10 @@ weebo_kit_domain::reason_codes! {
         DisruptiveChangeBlocked,
         /// The organization's `layoutRef` names no `OpenbaoSpaceLayout`.
         LayoutNotFound,
+        /// An `OpenbaoInstance` or `OpenbaoAccessLevel` still cited by
+        /// other CRs: its deletion waits until none cites it (or
+        /// `force-orphan`).
+        InUse,
         /// A mount `orgs` or `users` no longer declared: left in place
         /// with its secrets (the operator never disables a mount).
         MountOrphaned,

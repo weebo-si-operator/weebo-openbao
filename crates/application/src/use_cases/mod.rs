@@ -2,6 +2,7 @@
 //! controller turns into a status patch and Events — always through a
 //! `ReasonCode`, never a free string.
 
+pub mod check_layout;
 pub mod reconcile_grant;
 pub mod reconcile_instance;
 pub mod reconcile_namespace;
