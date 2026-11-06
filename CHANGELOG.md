@@ -2,6 +2,12 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## [v0.1.1](https://github.com/weebo-si-operator/weebo-openbao/compare/483e960cf90ab6b38fb9651de2ca9b671914d46c..v0.1.1) - 2026-11-06
+#### Bug Fixes
+- (**image**) accept CVE-2026-84243 (glibc, no fix) until 2026-12-06 - ([483e960](https://github.com/weebo-si-operator/weebo-openbao/commit/483e960cf90ab6b38fb9651de2ca9b671914d46c)) - Max Batleforc, Claude Opus 5.5
+
+- - -
+
 ## [v0.1.0](https://github.com/weebo-si-operator/weebo-openbao/compare/143fc45ef5af0bc18225e5040c80fbe4ab003cb7..v0.1.0) - 2026-11-06
 #### Features
 - (**api**) the spaces' kinds and their CEL rules - ([5b02f42](https://github.com/weebo-si-operator/weebo-openbao/commit/5b02f421f797793ecfa52553f361d88a45cc3fc2)) - Max Batleforc, Claude Opus 5.5
