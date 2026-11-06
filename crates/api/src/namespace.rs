@@ -6,6 +6,37 @@ pub use weebo_kit_api::LocalSecretKeyRef;
 use crate::refs::NameRef;
 use crate::status::Status;
 
+/// What the operator found and wrote in the namespace.
+#[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct NamespaceStatus {
+    #[serde(flatten)]
+    pub common: Status,
+    /// The auth backends as OpenBao lists them.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub auth: Vec<AuthStatus>,
+    /// `orgs` or `users` mounts no longer declared, left with their secrets.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub orphaned_mounts: Vec<String>,
+    /// Backends this operator enabled, no longer declared, left enabled.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub orphaned_auth: Vec<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, Eq, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct AuthStatus {
+    pub name: String,
+    #[serde(rename = "type")]
+    pub kind: String,
+    /// What group aliases and templated policies name the backend by.
+    pub accessor: String,
+    /// SHA-256 of the client secret last written: the secret can't be read
+    /// back, a change of digest rewrites the configuration.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub client_secret_digest: Option<String>,
+}
+
 /// An OpenBao namespace of the spaces, named by `metadata.name`, created
 /// by the operator and never deleted by it. Its `types` each get a KV v2
 /// mount of that name; its `auth` backends are created and configured, and
@@ -17,7 +48,7 @@ use crate::status::Status;
     version = "v1alpha1",
     kind = "OpenbaoNamespace",
     plural = "openbaonamespaces",
-    status = "Status",
+    status = "NamespaceStatus",
     validation = r#"self.metadata.name.matches('^[a-z]([a-z0-9-]{0,14}[a-z0-9])?$')"#,
     validation = r#"!(self.metadata.name in ['root', 'infra', 'sys', 'identity', 'auth', 'cubbyhole'])"#,
     printcolumn = r#"{"name":"Types","type":"string","jsonPath":".spec.types"}"#,

@@ -3,9 +3,10 @@
 //! `ReasonCode`, never a free string.
 
 pub mod reconcile_instance;
+pub mod reconcile_namespace;
 
 use domain::error::ReasonCode;
-use domain::{Drift, Failure, RemoteWrite};
+use domain::{Advisory, Drift, Failure, RemoteWrite};
 
 use crate::ports::{BoundInstance, OpenbaoError, SpaceAdminFactoryError};
 
@@ -36,6 +37,8 @@ pub struct Outcome {
     /// The fields put back in their desired state (a `DriftCorrected`
     /// Event names them).
     pub drift: Drift,
+    /// Non-blocking conditions next to `Ready` (an orphaned mount…).
+    pub advisories: Vec<Advisory>,
 }
 
 impl Outcome {
@@ -46,6 +49,7 @@ impl Outcome {
             ready: Ok(message.into()),
             write: None,
             drift: Drift::default(),
+            advisories: Vec::new(),
         }
     }
 
@@ -56,6 +60,7 @@ impl Outcome {
             ready: Err(failure.into()),
             write: None,
             drift: Drift::default(),
+            advisories: Vec::new(),
         }
     }
 
@@ -69,6 +74,15 @@ impl Outcome {
     pub fn corrected(mut self, drift: Drift) -> Self {
         self.write = Some(RemoteWrite::Drift);
         self.drift = drift;
+        self
+    }
+
+    /// Adds an advisory.
+    pub fn advise(mut self, reason: ReasonCode, message: impl Into<String>) -> Self {
+        self.advisories.push(Advisory {
+            reason,
+            message: message.into(),
+        });
         self
     }
 

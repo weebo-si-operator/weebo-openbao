@@ -276,6 +276,72 @@ pub fn render(rules: &[Rule], cx: &Context<'_>) -> Result<String, PolicyError> {
     Ok(text)
 }
 
+/// The personal spaces' policy of a `users` namespace (RFC 0007 §6.2):
+/// for each OIDC backend's accessor, the user's own folder of the `users`
+/// mount, templated on the alias metadata `key` that the backend's role
+/// maps the username to.
+pub fn render_user_space(
+    owner: &str,
+    accessors: &[&str],
+    key: &str,
+) -> Result<String, PolicyError> {
+    if !is_owner(owner) {
+        return Err(PolicyError::Name {
+            what: "owner mark",
+            value: owner.to_string(),
+        });
+    }
+    let key_ok = key.len() <= 32
+        && key.bytes().next().is_some_and(|b| b.is_ascii_lowercase())
+        && key
+            .bytes()
+            .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'_');
+    if !key_ok {
+        return Err(PolicyError::Name {
+            what: "alias metadata key",
+            value: key.to_string(),
+        });
+    }
+    let mut lines = vec![format!("# managed-by: weebo-openbao owner: {owner}")];
+    for accessor in accessors {
+        if !is_accessor(accessor) {
+            return Err(PolicyError::Name {
+                what: "accessor",
+                value: (*accessor).to_string(),
+            });
+        }
+        let user = format!("{{{{identity.entity.aliases.{accessor}.metadata.{key}}}}}");
+        push_block(
+            &mut lines,
+            "users",
+            "data",
+            &format!("{user}/*"),
+            &[
+                Capability::Create,
+                Capability::Read,
+                Capability::Update,
+                Capability::Patch,
+                Capability::Delete,
+            ],
+        );
+        push_block(
+            &mut lines,
+            "users",
+            "metadata",
+            &format!("{user}/*"),
+            &[Capability::Read, Capability::List, Capability::Delete],
+        );
+    }
+    let mut text = lines.join("\n");
+    text.push('\n');
+    Ok(text)
+}
+
+/// Whether `text` is a policy this operator wrote for `owner`.
+pub fn is_owned_by(text: &str, owner: &str) -> bool {
+    text.lines().next() == Some(format!("# managed-by: weebo-openbao owner: {owner}").as_str())
+}
+
 fn push_block(lines: &mut Vec<String>, mount: &str, kind: &str, path: &str, caps: &[Capability]) {
     if caps.is_empty() {
         return;
@@ -456,6 +522,26 @@ mod tests {
             },
         );
         assert!(matches!(bad_org, Err(PolicyError::Name { .. })));
+    }
+
+    #[test]
+    fn user_space_templates_on_each_oidc_backend() {
+        let text = render_user_space(
+            "OpenbaoNamespace/users",
+            &["auth_oidc_1", "auth_oidc_2"],
+            "username",
+        )
+        .unwrap();
+        assert!(text.contains(
+            "path \"users/data/{{identity.entity.aliases.auth_oidc_1.metadata.username}}/*\" { capabilities = [\"create\", \"read\", \"update\", \"patch\", \"delete\"] }"
+        ));
+        assert!(text.contains("auth_oidc_2"));
+        assert!(is_owned_by(&text, "OpenbaoNamespace/users"));
+        assert!(!is_owned_by(&text, "OpenbaoNamespace/other"));
+        assert!(render_user_space("OpenbaoNamespace/users", &["x}}/*"], "username").is_err());
+        assert!(
+            render_user_space("OpenbaoNamespace/users", &["auth_oidc_1"], "user name").is_err()
+        );
     }
 
     /// xorshift64: a deterministic stream of bytes for the property below.

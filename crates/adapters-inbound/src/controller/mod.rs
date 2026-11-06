@@ -35,6 +35,7 @@ pub use weebo_kit_runtime::Shutdown;
 pub use weebo_kit_runtime::controller::{controller, drive};
 
 pub mod instance;
+pub mod namespace;
 
 /// Field manager of the status patches, meter and Event reporter name.
 pub const FIELD_MANAGER: &str = "weebo-openbao-operator";
@@ -76,6 +77,12 @@ pub fn spawn_watches(client: &Client, scope: &WatchScope, health: &Arc<Health>) 
             scope,
             health,
             "OpenbaoInstance watch",
+        );
+        watches.spawn(
+            scope.api::<api::OpenbaoNamespace>(client.clone()),
+            scope,
+            health,
+            "OpenbaoNamespace watch",
         );
     }
     watches
@@ -172,6 +179,12 @@ impl HasStatus for api::Instance {
     }
 }
 
+impl HasStatus for api::OpenbaoNamespace {
+    fn status(&self) -> Option<&Status> {
+        self.status.as_ref().map(|s| &s.common)
+    }
+}
+
 /// Publishes `outcome` on `obj` (read fresh from the API server: its
 /// conditions are the previous ones). The kit's: one merge patch
 /// (conditions, `observedGeneration` on success, `remoteId`), retried while
@@ -184,6 +197,7 @@ pub async fn publish<K>(
     recorder: &Recorder,
     obj: &K,
     outcome: &Outcome,
+    extra: serde_json::Map<String, serde_json::Value>,
 ) -> Result<(), kube::Error>
 where
     K: Resource<DynamicType = ()> + HasStatus + Clone + Debug + DeserializeOwned + Serialize,
@@ -192,7 +206,7 @@ where
         .status()
         .map(|s| s.conditions.as_slice())
         .unwrap_or_default();
-    let mut fields = serde_json::Map::new();
+    let mut fields = extra;
     if let Some(id) = &outcome.remote_id {
         fields.insert("remoteId".into(), id.clone().into());
     }
@@ -208,7 +222,7 @@ where
         previous,
         StatusUpdate {
             ready: &outcome.ready,
-            advisories: &[],
+            advisories: &outcome.advisories,
             fields,
         },
     )

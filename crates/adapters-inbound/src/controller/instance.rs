@@ -37,6 +37,13 @@ async fn reconcile(obj: Arc<Instance>, ctx: Arc<Ctx>) -> Result<Action, Error> {
         Err(e) => Outcome::failed(e),
     };
     super::record_reconcile(KIND, started, &outcome);
-    super::publish(&api, &ctx.recorder, obj.as_ref(), &outcome).await?;
+    super::publish(
+        &api,
+        &ctx.recorder,
+        obj.as_ref(),
+        &outcome,
+        serde_json::Map::new(),
+    )
+    .await?;
     Ok(super::requeue_after(obj.as_ref(), &outcome))
 }

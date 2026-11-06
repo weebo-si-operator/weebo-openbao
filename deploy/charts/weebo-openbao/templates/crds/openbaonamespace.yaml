@@ -177,8 +177,32 @@ spec:
             - message: instanceRef is immutable
               rule: self.instanceRef == oldSelf.instanceRef
           status:
+            description: What the operator found and wrote in the namespace.
             nullable: true
             properties:
+              auth:
+                description: The auth backends as OpenBao lists them.
+                items:
+                  properties:
+                    accessor:
+                      description: What group aliases and templated policies name the backend by.
+                      type: string
+                    clientSecretDigest:
+                      description: |-
+                        SHA-256 of the client secret last written: the secret can't be read
+                        back, a change of digest rewrites the configuration.
+                      nullable: true
+                      type: string
+                    name:
+                      type: string
+                    type:
+                      type: string
+                  required:
+                  - accessor
+                  - name
+                  - type
+                  type: object
+                type: array
               conditions:
                 default: []
                 description: '`Ready`, carrying one of the operator''s reason codes.'
@@ -238,6 +262,16 @@ spec:
                 format: int64
                 nullable: true
                 type: integer
+              orphanedAuth:
+                description: Backends this operator enabled, no longer declared, left enabled.
+                items:
+                  type: string
+                type: array
+              orphanedMounts:
+                description: '`orgs` or `users` mounts no longer declared, left with their secrets.'
+                items:
+                  type: string
+                type: array
               remoteId:
                 description: |-
                   Identifier of the remote object, as Openbao returned it. Its

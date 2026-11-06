@@ -139,7 +139,10 @@ async fn run(telemetry: &telemetry::Telemetry) -> anyhow::Result<()> {
     tracing::info!("starting controllers");
     let cluster_instances = async {
         if ctx.scope.cluster_kinds() {
-            controller::instance::run(client.clone(), ctx.clone()).await;
+            tokio::join!(
+                controller::instance::run(client.clone(), ctx.clone()),
+                controller::namespace::run(client.clone(), ctx.clone()),
+            );
         }
     };
     cluster_instances.await;

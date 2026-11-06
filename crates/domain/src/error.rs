@@ -46,6 +46,27 @@ weebo_kit_domain::reason_codes! {
         /// OpenBao denied a call to a valid token: the operator's
         /// bootstrap policy and the CRs disagree (RFC 0007 §10.2).
         PermissionDenied,
+        /// An `OpenbaoNamespace` outside the instance's `bounds`: nothing
+        /// is called, the bootstrap policy would refuse it anyway.
+        OutOfBounds,
+        /// A mount or an auth backend already there with another type: only
+        /// a `disable`, which the operator never does, would fix it.
+        MountTypeMismatch,
+        /// The Secret an OIDC backend's `clientSecretRef` names, or its
+        /// key, is missing from the operator's namespace.
+        SecretUnavailable,
+        /// OpenBao refused an auth backend's configuration (an identity
+        /// provider it can't reach): the backend keeps its last one.
+        AuthConfigRejected,
+        /// An object of the same name is there and isn't this CR's (no
+        /// `managed-by` mark for it): nothing is written over it.
+        NotOwned,
+        /// A mount `orgs` or `users` no longer declared: left in place
+        /// with its secrets (the operator never disables a mount).
+        MountOrphaned,
+        /// An auth backend this operator enabled, no longer declared: left
+        /// in place (the operator never disables a backend).
+        AuthOrphaned,
         /// A Kubernetes API call of the operator itself failed (reading a
         /// CR or a Secret, patching a status, the finalizer) — retried.
         KubernetesApiError,
@@ -89,7 +110,9 @@ impl ReasonCode {
             | ReasonCode::Created
             | ReasonCode::DriftCorrected
             | ReasonCode::Deleted
-            | ReasonCode::Released => Severity::Advisory,
+            | ReasonCode::Released
+            | ReasonCode::MountOrphaned
+            | ReasonCode::AuthOrphaned => Severity::Advisory,
             _ => Severity::Blocking,
         }
     }
@@ -105,7 +128,7 @@ mod tests {
     }
 
     #[test]
-    fn only_success_and_lifecycle_events_are_advisory() {
+    fn only_success_lifecycle_events_and_orphans_are_advisory() {
         let advisory: Vec<_> = ReasonCode::ALL
             .iter()
             .filter(|c| c.severity() == Severity::Advisory)
@@ -114,6 +137,8 @@ mod tests {
             advisory,
             [
                 &ReasonCode::Reconciled,
+                &ReasonCode::MountOrphaned,
+                &ReasonCode::AuthOrphaned,
                 &ReasonCode::Created,
                 &ReasonCode::DriftCorrected,
                 &ReasonCode::Deleted,

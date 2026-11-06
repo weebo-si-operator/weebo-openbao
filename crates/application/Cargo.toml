@@ -9,6 +9,7 @@ publish.workspace = true
 domain = { workspace = true }
 api = { workspace = true }
 weebo-kit-application = { workspace = true }
+weebo-kit-api = { workspace = true }
 async-trait = { workspace = true }
 thiserror = { workspace = true }
 
