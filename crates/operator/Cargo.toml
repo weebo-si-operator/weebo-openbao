@@ -21,5 +21,16 @@ tracing = { workspace = true }
 uuid = { workspace = true }
 weebo-kit-runtime = { workspace = true }
 
+[dev-dependencies]
+application = { workspace = true, features = ["test-support"] }
+axum = { workspace = true }
+axum-server = { workspace = true }
+k8s-openapi = { workspace = true }
+rcgen = "0.14.10"
+serde = { workspace = true }
+serde_json = { workspace = true }
+testkit = { workspace = true }
+weebo-kit-perf = { workspace = true }
+
 [lints]
 workspace = true

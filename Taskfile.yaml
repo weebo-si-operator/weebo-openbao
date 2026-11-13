@@ -83,6 +83,18 @@ tasks:
     cmds:
       - OPENBAO_LIVE=1 mise exec -- cargo test -p adapters-outbound --test live_openbao -- --nocapture
 
+  perf:
+    desc: >
+      What the operator costs a cluster (weebo-kit-perf, RFC 0007 §10.3):
+      the release binary against envtest and a fake OpenBao — 4 orgs
+      namespaces + users, 11 cells per organization; idle, burst, churn,
+      delete; zero OpenBao write at rest — checked against the
+      small-cluster budget; report in target/perf/. PERF_OBJECTS,
+      PERF_IDLE_SECS; WEEBO_PERF_BASELINE=<previous json>;
+      WEEBO_PERF_REPORT_ONLY=1 to report without failing.
+    cmds:
+      - mise exec -- cargo test --release -p operator --test perf -- --ignored --nocapture
+
   test:all:
     desc: "Every test suite: unit/contract + integration"
     cmds:

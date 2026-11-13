@@ -1,0 +1,69 @@
+name: Resource budget
+
+# Every week, what the operator costs a cluster is measured again (`task
+# perf`: weebo-kit-perf, the release binary against envtest and a fake
+# OpenBao, RFC 0007 §10.3) against the kit's small-cluster budget.
+#
+# The steps of weebo-operator-kit's reusable perf.yml, without its docs
+# refresh: that one needs a docs site (`docs/` with `gen:crds`) this
+# repository doesn't have yet. Once it does, call the kit's workflow
+# instead, as weebo-forgejo does.
+on:
+  schedule:
+    - cron: "0 4 * * 1"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  perf:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-mise
+      - name: Cache cargo registry
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: cargo-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
+      # The perf test builds the testkit's envtest, whose bindgen step needs
+      # libclang.
+      - name: Install libclang
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libclang-dev
+          LIBCLANG_SO="$(find /usr/lib -iname 'libclang.so*' 2>/dev/null | head -n1)"
+          if [ -z "$LIBCLANG_SO" ]; then
+            echo "::error::libclang.so not found after installing libclang-dev" >&2
+            exit 1
+          fi
+          {
+            echo "LIBCLANG_PATH=$(dirname "$LIBCLANG_SO")"
+            echo "BINDGEN_EXTRA_CLANG_ARGS="
+          } >> "$GITHUB_ENV"
+      - run: mise install
+      - name: Measure
+        id: measure
+        run: |
+          # The verdict is kept for the last step, the report is kept either way.
+          set +e
+          mise exec -- task perf
+          echo "status=$?" >> "$GITHUB_OUTPUT"
+          test -f target/perf/weebo-openbao.json
+      - name: Keep the report
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: perf-weebo-openbao
+          path: target/perf/
+      - run: cat target/perf/weebo-openbao.md >> "$GITHUB_STEP_SUMMARY"
+      - name: Within budget
+        if: steps.measure.outputs.status != '0'
+        run: |
+          echo "::error::the operator exceeds its resource budget — see the report above"
+          exit 1
