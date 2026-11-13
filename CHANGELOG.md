@@ -2,6 +2,12 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## [v0.1.5](https://github.com/weebo-si-operator/weebo-openbao/compare/93c5056ed3b6185f7803c19c8381cb154afd9dfb..v0.1.5) - 2026-11-13
+#### Bug Fixes
+- (**image**) core-runtime base with libgcc 16.2.1-3.2, the v0.1.4 publish failed grype - ([93c5056](https://github.com/weebo-si-operator/weebo-openbao/commit/93c5056ed3b6185f7803c19c8381cb154afd9dfb)) - Max Batleforc, Claude Opus 5.5
+
+- - -
+
 ## [v0.1.4](https://github.com/weebo-si-operator/weebo-openbao/compare/af1467a797b1c4177ab1c3aefe2238a7af6fdd63..v0.1.4) - 2026-11-13
 #### Bug Fixes
 - (**organization**) the Deleted Event names each namespace once - ([89bb047](https://github.com/weebo-si-operator/weebo-openbao/commit/89bb047cdd10cf2034206f319bf3a394b4169f98)) - Max Batleforc, Claude Opus 5.5
