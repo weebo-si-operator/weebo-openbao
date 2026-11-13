@@ -2,6 +2,14 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## [v0.1.4](https://github.com/weebo-si-operator/weebo-openbao/compare/af1467a797b1c4177ab1c3aefe2238a7af6fdd63..v0.1.4) - 2026-11-13
+#### Bug Fixes
+- (**organization**) the Deleted Event names each namespace once - ([89bb047](https://github.com/weebo-si-operator/weebo-openbao/commit/89bb047cdd10cf2034206f319bf3a394b4169f98)) - Max Batleforc, Claude Opus 5.5
+#### Tests
+- (**policy**) the weebo layout renders the Terraform org policies (RFC 0007 §6.P n°5) - ([af1467a](https://github.com/weebo-si-operator/weebo-openbao/commit/af1467a797b1c4177ab1c3aefe2238a7af6fdd63)) - Max Batleforc, Claude Opus 5.5
+
+- - -
+
 ## [v0.1.3](https://github.com/weebo-si-operator/weebo-openbao/compare/7e4d17d13114cd36e25945956c97f8a036de0119..v0.1.3) - 2026-11-06
 #### Bug Fixes
 - (**chart**) pull the image from the weebo-si-operator org - ([7e4d17d](https://github.com/weebo-si-operator/weebo-openbao/commit/7e4d17d13114cd36e25945956c97f8a036de0119)) - Max Batleforc, Claude Opus 5.5
