@@ -473,6 +473,69 @@ async fn the_spaces_reconcile_on_a_real_openbao_and_stay_quiet() {
         "a second pass writes nothing: {:?}",
         granted_again.outcome
     );
+
+    // §6.P n°11: sealed, every reconcile stops on VaultSealed and writes
+    // nothing; unsealed, the same token passes again with nothing to write.
+    bao(&name, port, &["operator", "seal"], None);
+    let sealed_ns = reconcile_namespace(&admin, &ns_input).await;
+    let sealed_org = reconcile_organization(&admin, &org_input(&org.cells)).await;
+    let sealed_grant = reconcile_grant(&admin, &grant_input(roles_written)).await;
+    for (what, reason, write) in [
+        (
+            "namespace",
+            sealed_ns.outcome.reason(),
+            sealed_ns.outcome.write,
+        ),
+        (
+            "organization",
+            sealed_org.outcome.reason(),
+            sealed_org.outcome.write,
+        ),
+        (
+            "grant",
+            sealed_grant.outcome.reason(),
+            sealed_grant.outcome.write,
+        ),
+    ] {
+        assert_eq!(reason, ReasonCode::VaultSealed, "{what}");
+        assert_eq!(write, None, "{what}: nothing written while sealed");
+    }
+    let logs = Command::new("podman")
+        .args(["logs", &name])
+        .output()
+        .unwrap();
+    let logs =
+        String::from_utf8_lossy(&logs.stdout).into_owned() + &String::from_utf8_lossy(&logs.stderr);
+    let key = logs
+        .lines()
+        .find_map(|l| l.trim().strip_prefix("Unseal Key: "))
+        .unwrap()
+        .to_string();
+    bao(&name, port, &["operator", "unseal", &key], None);
+    let unsealed_ns = reconcile_namespace(&admin, &ns_input).await;
+    let unsealed_org = reconcile_organization(&admin, &org_input(&org.cells)).await;
+    let unsealed_grant = reconcile_grant(&admin, &grant_input(roles_written)).await;
+    for (what, reason, write) in [
+        (
+            "namespace",
+            unsealed_ns.outcome.reason(),
+            unsealed_ns.outcome.write,
+        ),
+        (
+            "organization",
+            unsealed_org.outcome.reason(),
+            unsealed_org.outcome.write,
+        ),
+        (
+            "grant",
+            unsealed_grant.outcome.reason(),
+            unsealed_grant.outcome.write,
+        ),
+    ] {
+        assert_eq!(reason, ReasonCode::Reconciled, "{what} after unseal");
+        assert_eq!(write, None, "{what}: nothing had changed, nothing written");
+    }
+
     let policy = admin
         .read_policy("devenv", "grant_repo-workloads-read-own")
         .await
