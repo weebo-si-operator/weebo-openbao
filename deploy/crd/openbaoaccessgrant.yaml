@@ -105,7 +105,12 @@ spec:
                 minItems: 1
                 type: array
               subjects:
-                description: The ServiceAccounts, one Kubernetes role each.
+                description: |-
+                  The ServiceAccounts, one Kubernetes role each, named
+                  `grant_<name>_<index>` after the subject's position in this list
+                  (from 0). Reordering or removing a subject renames the roles of the
+                  ones after it: consumers name their role as it is in `status.roles`,
+                  so append new subjects at the end.
                 items:
                   description: |-
                     ServiceAccounts by namespace and name (a leading or trailing `*` glob),
@@ -237,7 +242,9 @@ spec:
                 nullable: true
                 type: string
               roles:
-                description: '`grant_<name>_<index>`, in the order of `subjects`.'
+                description: |-
+                  The role each subject logs in with, in the order of `subjects`:
+                  `grant_<name>_<index>`, the index being the subject's position.
                 items:
                   type: string
                 type: array

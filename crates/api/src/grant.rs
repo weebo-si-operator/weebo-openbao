@@ -42,7 +42,11 @@ pub struct OpenbaoAccessGrantSpec {
     /// The `kubernetes` backend of that namespace the subjects log in to.
     #[schemars(regex(pattern = "^[a-z]([a-z0-9-]{0,14}[a-z0-9])?$"), length(max = 16))]
     pub auth: String,
-    /// The ServiceAccounts, one Kubernetes role each.
+    /// The ServiceAccounts, one Kubernetes role each, named
+    /// `grant_<name>_<index>` after the subject's position in this list
+    /// (from 0). Reordering or removing a subject renames the roles of the
+    /// ones after it: consumers name their role as it is in `status.roles`,
+    /// so append new subjects at the end.
     #[schemars(length(min = 1, max = 8))]
     pub subjects: Vec<Subject>,
     /// What the subjects get.
@@ -140,7 +144,8 @@ pub struct GrantStatus {
     pub common: Status,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub policy: Option<String>,
-    /// `grant_<name>_<index>`, in the order of `subjects`.
+    /// The role each subject logs in with, in the order of `subjects`:
+    /// `grant_<name>_<index>`, the index being the subject's position.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub roles: Vec<String>,
 }
