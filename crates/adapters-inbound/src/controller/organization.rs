@@ -241,7 +241,9 @@ async fn cleanup(
         .await
         .map_err(|e| Error::Cleanup(Failure::from(e)))?;
     super::metrics().record_write(KIND, domain::RemoteWrite::Deleted);
-    let namespaces: Vec<&str> = cells.iter().map(|c| c.namespace.as_str()).collect();
+    // One cell per role and namespace: name each namespace once.
+    let namespaces: std::collections::BTreeSet<&str> =
+        cells.iter().map(|c| c.namespace.as_str()).collect();
     events::announce_change(
         &ctx.recorder,
         &org.object_ref(&()),
@@ -251,7 +253,7 @@ async fn cleanup(
             "access of {} removed; its secrets stay in orgs/{}/ of {}",
             org.spec.name,
             org.spec.name,
-            namespaces.join(", ")
+            namespaces.into_iter().collect::<Vec<_>>().join(", ")
         ),
     )
     .await;
