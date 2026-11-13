@@ -35,7 +35,7 @@ RUN find crates -name '*.rs' -exec touch {} + && \
 # Red Hat Hummingbird core runtime: minimal, continuously rebuilt for CVEs.
 # Grype reads its RPM database (Trivy doesn't know the OS); its accepted
 # findings are .grype.yaml's.
-FROM registry.access.redhat.com/hi/core-runtime:latest@sha256:1abbb3f306dd1df28c46415def816056247cf850b861655097d46af971746f9b AS runtime
+FROM registry.access.redhat.com/hi/core-runtime:latest@sha256:81280d7fd6afa7a3d2a6da2e90e545cf8e5d187c80a69b2a1c875fdcd731aaed AS runtime
 
 COPY --from=builder /build/target/release/weebo-openbao-operator /usr/local/bin/operator
 
