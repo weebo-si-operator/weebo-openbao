@@ -443,6 +443,166 @@ mod tests {
         );
     }
 
+    /// RFC 0007 §6.P n°5: the `weebo` layout and levels of weebo-si
+    /// (`2.argo/helm/vault/spaces/values.yaml`), rendered cell by cell and
+    /// put end to end per role, give exactly the paths and capabilities of
+    /// `vault_policy.org["batleforc-org_<role>"]` in the Terraform they
+    /// replace (weebo-si `c4e62809^:2.terra/auth/terra-map/vault-spaces.tf`),
+    /// `orgs-<env>/` becoming `<env>/orgs/`.
+    #[test]
+    fn the_weebo_layout_renders_the_terraform_org_policies() {
+        use Capability::*;
+        use std::collections::{BTreeMap, BTreeSet};
+
+        let level = |data: &[Capability], metadata: &[Capability], versions| Level {
+            data: data.to_vec(),
+            metadata: metadata.to_vec(),
+            versions,
+        };
+        let levels = BTreeMap::from([
+            ("read", level(&[Read], &[Read, List], false)),
+            (
+                "write",
+                level(&[Create, Read, Update, Patch], &[Read, List], false),
+            ),
+            (
+                "owner",
+                level(
+                    &[Create, Read, Update, Patch, Delete],
+                    &[Read, List, Delete],
+                    true,
+                ),
+            ),
+        ]);
+        let layout = [
+            (
+                "owner",
+                &[
+                    ("prod", "owner"),
+                    ("preprod", "owner"),
+                    ("recette", "owner"),
+                    ("devenv", "owner"),
+                ][..],
+            ),
+            (
+                "maintainer",
+                &[
+                    ("prod", "write"),
+                    ("preprod", "write"),
+                    ("recette", "write"),
+                    ("devenv", "write"),
+                ][..],
+            ),
+            (
+                "dev",
+                &[
+                    ("preprod", "read"),
+                    ("recette", "write"),
+                    ("devenv", "write"),
+                ][..],
+            ),
+        ];
+
+        // The Terraform policies, expanded: `<path> <capabilities>`.
+        let terraform: BTreeMap<&str, &str> = BTreeMap::from([
+            (
+                "owner",
+                "\
+                orgs-prod/data/batleforc-org/+/* create read update patch delete\n\
+                orgs-prod/metadata/batleforc-org/* read list delete\n\
+                orgs-prod/delete/batleforc-org/+/* update\n\
+                orgs-prod/undelete/batleforc-org/+/* update\n\
+                orgs-prod/destroy/batleforc-org/+/* update\n\
+                orgs-preprod/data/batleforc-org/+/* create read update patch delete\n\
+                orgs-preprod/metadata/batleforc-org/* read list delete\n\
+                orgs-preprod/delete/batleforc-org/+/* update\n\
+                orgs-preprod/undelete/batleforc-org/+/* update\n\
+                orgs-preprod/destroy/batleforc-org/+/* update\n\
+                orgs-recette/data/batleforc-org/+/* create read update patch delete\n\
+                orgs-recette/metadata/batleforc-org/* read list delete\n\
+                orgs-recette/delete/batleforc-org/+/* update\n\
+                orgs-recette/undelete/batleforc-org/+/* update\n\
+                orgs-recette/destroy/batleforc-org/+/* update\n\
+                orgs-devenv/data/batleforc-org/+/* create read update patch delete\n\
+                orgs-devenv/metadata/batleforc-org/* read list delete\n\
+                orgs-devenv/delete/batleforc-org/+/* update\n\
+                orgs-devenv/undelete/batleforc-org/+/* update\n\
+                orgs-devenv/destroy/batleforc-org/+/* update",
+            ),
+            (
+                "maintainer",
+                "\
+                orgs-prod/data/batleforc-org/+/* create read update patch\n\
+                orgs-prod/metadata/batleforc-org/* read list\n\
+                orgs-preprod/data/batleforc-org/+/* create read update patch\n\
+                orgs-preprod/metadata/batleforc-org/* read list\n\
+                orgs-recette/data/batleforc-org/+/* create read update patch\n\
+                orgs-recette/metadata/batleforc-org/* read list\n\
+                orgs-devenv/data/batleforc-org/+/* create read update patch\n\
+                orgs-devenv/metadata/batleforc-org/* read list",
+            ),
+            (
+                "dev",
+                "\
+                orgs-preprod/data/batleforc-org/+/* read\n\
+                orgs-preprod/metadata/batleforc-org/* read list\n\
+                orgs-recette/data/batleforc-org/+/* create read update patch\n\
+                orgs-recette/metadata/batleforc-org/* read list\n\
+                orgs-devenv/data/batleforc-org/+/* create read update patch\n\
+                orgs-devenv/metadata/batleforc-org/* read list",
+            ),
+        ]);
+        let expected = |text: &str| -> BTreeSet<(String, BTreeSet<String>)> {
+            text.lines()
+                .map(|l| {
+                    let mut words = l.split_whitespace();
+                    let path = words.next().unwrap();
+                    let (mount, rest) = path.split_once('/').unwrap();
+                    let env = mount.strip_prefix("orgs-").unwrap();
+                    (
+                        format!("{env}/orgs/{rest}"),
+                        words.map(String::from).collect(),
+                    )
+                })
+                .collect()
+        };
+
+        for (role, cells) in layout {
+            let mut got = BTreeSet::new();
+            for (env, lvl) in cells {
+                let text = render(
+                    &[rule(
+                        "orgs",
+                        "{org}/+/*",
+                        Some("{org}/*"),
+                        levels[lvl].clone(),
+                    )],
+                    &Context {
+                        owner: "OpenbaoOrganization/batleforc-org",
+                        organizations: &orgs(&["batleforc-org"]),
+                        accessor: None,
+                    },
+                )
+                .unwrap();
+                // path "<p>" { capabilities = ["a", "b"] }
+                for line in text.lines().filter(|l| l.starts_with("path ")) {
+                    let (path, caps) = line
+                        .strip_prefix("path \"")
+                        .and_then(|l| l.split_once("\" { capabilities = ["))
+                        .unwrap();
+                    let caps = caps.strip_suffix("] }").unwrap();
+                    got.insert((
+                        format!("{env}/{path}"),
+                        caps.split(", ")
+                            .map(|c| c.trim_matches('"').to_string())
+                            .collect(),
+                    ));
+                }
+            }
+            assert_eq!(got, expected(terraform[role]), "role {role}");
+        }
+    }
+
     #[test]
     fn org_expands_once_per_organization_and_versions_add_their_paths() {
         let owner = Level {
