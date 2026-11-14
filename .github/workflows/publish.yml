@@ -26,7 +26,7 @@ permissions: {}
 
 jobs:
   publish:
-    uses: weebo-si-operator/weebo-operator-kit/.github/workflows/publish.yml@v0.30.0
+    uses: weebo-si-operator/weebo-operator-kit/.github/workflows/publish.yml@v0.32.0
     permissions:
       contents: write
       packages: write

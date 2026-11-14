@@ -274,6 +274,20 @@ podLabels: {}
 # and Vault must be allowed explicitly (docs: "Security model").
 networkPolicy:
   enabled: false
+  # -- `NetworkPolicy` (any CNI) or `CiliumNetworkPolicy`. On Cilium an
+  # `ipBlock` never selects the API server (its identity is the
+  # `kube-apiserver` entity), so a restricted egress needs the Cilium kind.
+  # With it, webhookFrom/metricsFrom are Cilium peers (`fromEntities`,
+  # `fromEndpoints`...), every egress rule below is a Cilium egress rule
+  # (`toEndpoints`, `toFQDNs`... and `toPorts`), cilium.dnsTo and
+  # cilium.apiServerTo replace dns.to and apiServer.to, and the node's
+  # probes (`host`) always reach the webhook port.
+  kind: NetworkPolicy
+  # -- Cilium selectors (without toPorts) of the cluster resolver and the
+  # API server. Defaults: `{toEndpoints: [{matchLabels:
+  # {k8s:io.kubernetes.pod.namespace: kube-system, k8s-app: kube-dns}]}`
+  # and `{toEntities: [kube-apiserver]}`.
+  cilium: {}
   # -- Peers allowed to reach the webhook port. Empty allows every source:
   # the API server's source address is cluster specific (host network,
   # managed control plane), restrict it when you know it.

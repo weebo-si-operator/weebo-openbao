@@ -4194,8 +4194,8 @@ dependencies = [
 
 [[package]]
 name = "weebo-kit-adapters"
-version = "0.30.0"
-source = "git+https://github.com/weebo-si-operator/weebo-operator-kit?tag=v0.30.0#e20e00e40cddf4b5c5821c229e51d7a3f4cfcb2f"
+version = "0.32.0"
+source = "git+https://github.com/weebo-si-operator/weebo-operator-kit?tag=v0.32.0#8284bb9f1440e9b1844b4bb53325695e34c1d1db"
 dependencies = [
  "async-trait",
  "futures",
@@ -4217,8 +4217,8 @@ dependencies = [
 
 [[package]]
 name = "weebo-kit-api"
-version = "0.30.0"
-source = "git+https://github.com/weebo-si-operator/weebo-operator-kit?tag=v0.30.0#e20e00e40cddf4b5c5821c229e51d7a3f4cfcb2f"
+version = "0.32.0"
+source = "git+https://github.com/weebo-si-operator/weebo-operator-kit?tag=v0.32.0#8284bb9f1440e9b1844b4bb53325695e34c1d1db"
 dependencies = [
  "k8s-openapi",
  "schemars",
@@ -4228,8 +4228,8 @@ dependencies = [
 
 [[package]]
 name = "weebo-kit-application"
-version = "0.30.0"
-source = "git+https://github.com/weebo-si-operator/weebo-operator-kit?tag=v0.30.0#e20e00e40cddf4b5c5821c229e51d7a3f4cfcb2f"
+version = "0.32.0"
+source = "git+https://github.com/weebo-si-operator/weebo-operator-kit?tag=v0.32.0#8284bb9f1440e9b1844b4bb53325695e34c1d1db"
 dependencies = [
  "async-trait",
  "k8s-openapi",
@@ -4242,13 +4242,13 @@ dependencies = [
 
 [[package]]
 name = "weebo-kit-domain"
-version = "0.30.0"
-source = "git+https://github.com/weebo-si-operator/weebo-operator-kit?tag=v0.30.0#e20e00e40cddf4b5c5821c229e51d7a3f4cfcb2f"
+version = "0.32.0"
+source = "git+https://github.com/weebo-si-operator/weebo-operator-kit?tag=v0.32.0#8284bb9f1440e9b1844b4bb53325695e34c1d1db"
 
 [[package]]
 name = "weebo-kit-perf"
-version = "0.30.0"
-source = "git+https://github.com/weebo-si-operator/weebo-operator-kit?tag=v0.30.0#e20e00e40cddf4b5c5821c229e51d7a3f4cfcb2f"
+version = "0.32.0"
+source = "git+https://github.com/weebo-si-operator/weebo-operator-kit?tag=v0.32.0#8284bb9f1440e9b1844b4bb53325695e34c1d1db"
 dependencies = [
  "http",
  "k8s-openapi",
@@ -4262,8 +4262,8 @@ dependencies = [
 
 [[package]]
 name = "weebo-kit-runtime"
-version = "0.30.0"
-source = "git+https://github.com/weebo-si-operator/weebo-operator-kit?tag=v0.30.0#e20e00e40cddf4b5c5821c229e51d7a3f4cfcb2f"
+version = "0.32.0"
+source = "git+https://github.com/weebo-si-operator/weebo-operator-kit?tag=v0.32.0#8284bb9f1440e9b1844b4bb53325695e34c1d1db"
 dependencies = [
  "async-trait",
  "axum",
@@ -4290,8 +4290,8 @@ dependencies = [
 
 [[package]]
 name = "weebo-kit-testkit"
-version = "0.30.0"
-source = "git+https://github.com/weebo-si-operator/weebo-operator-kit?tag=v0.30.0#e20e00e40cddf4b5c5821c229e51d7a3f4cfcb2f"
+version = "0.32.0"
+source = "git+https://github.com/weebo-si-operator/weebo-operator-kit?tag=v0.32.0#8284bb9f1440e9b1844b4bb53325695e34c1d1db"
 dependencies = [
  "envtest",
  "k8s-openapi",
