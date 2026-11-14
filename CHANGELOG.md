@@ -2,6 +2,19 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## [v0.2.0](https://github.com/weebo-si-operator/weebo-openbao/compare/68c3e0c678f333b3479d393939076d520c669442..v0.2.0) - 2026-11-14
+#### Features
+- (**chart**) networkPolicy.kind CiliumNetworkPolicy (kit v0.32.0) - ([2c0b071](https://github.com/weebo-si-operator/weebo-openbao/commit/2c0b07185bcaef9c96d547b28b78af5d021dc33a)) - Max Batleforc, Claude Opus 5.5
+#### Documentation
+- (**grant**) a subject's role is grant_<name>_<index>, by its position - ([68c3e0c](https://github.com/weebo-si-operator/weebo-openbao/commit/68c3e0c678f333b3479d393939076d520c669442)) - Max Batleforc, Claude Opus 5.5
+#### Tests
+- (**live**) sealed, every reconcile stops on VaultSealed and writes nothing (RFC 0007 §6.P n°11) - ([c9d40da](https://github.com/weebo-si-operator/weebo-openbao/commit/c9d40dae85728ce3ab6184b34e2be773b059be75)) - Max Batleforc, Claude Opus 5.5
+- (**perf**) weekly weebo-kit-perf budget, Budget::small_cluster() (RFC 0007 §10.3) - ([02c441b](https://github.com/weebo-si-operator/weebo-openbao/commit/02c441b8ef26ca1783cda5cb8c5f2fe8d82ec6c5)) - Max Batleforc, Claude Opus 5.5
+#### Refactoring
+- (**domain**) drop four template reason codes weebo-openbao never emits - ([4dfa0ab](https://github.com/weebo-si-operator/weebo-openbao/commit/4dfa0abb59939d7d84d84617ff19a4e7b48dc0c9)) - Max Batleforc, Claude Opus 5.5
+
+- - -
+
 ## [v0.1.5](https://github.com/weebo-si-operator/weebo-openbao/compare/93c5056ed3b6185f7803c19c8381cb154afd9dfb..v0.1.5) - 2026-11-13
 #### Bug Fixes
 - (**image**) core-runtime base with libgcc 16.2.1-3.2, the v0.1.4 publish failed grype - ([93c5056](https://github.com/weebo-si-operator/weebo-openbao/commit/93c5056ed3b6185f7803c19c8381cb154afd9dfb)) - Max Batleforc, Claude Opus 5.5
