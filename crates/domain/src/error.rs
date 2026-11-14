@@ -11,24 +11,9 @@ weebo_kit_domain::reason_codes! {
         Reconciled,
         /// `spec.instanceRef` names no `OpenbaoInstance` the operator sees.
         InstanceNotFound,
-        /// `spec.instanceRef` is unset and several instances could serve
-        /// the object.
-        InstanceAmbiguous,
-        /// The instance named is out of reach: a `OpenbaoLocalInstance`
-        /// of another namespace that doesn't share itself with this one, or
-        /// outside the namespace the operator is limited to.
-        InstanceNotAllowed,
-        /// `spec.instanceRef` by name now designates another instance than
-        /// the one recorded in `status.instance`: not followed until
-        /// `spec.instanceRef.kind` says which.
-        InstanceBindingChanged,
         /// The instance's `tokenSecretRef` Secret, or its key, is missing
         /// or not UTF-8.
         TokenSecretMissing,
-        /// The `tokenSecretRef` Secret of a `OpenbaoLocalInstance` lacks
-        /// the `instance-token: "true"` label: the operator only reads a
-        /// Secret that opts in.
-        TokenSecretNotAllowed,
         /// The instance's spec can't produce a client (e.g. an invalid
         /// `url`). Only a change of the CR clears it.
         InvalidSpec,
